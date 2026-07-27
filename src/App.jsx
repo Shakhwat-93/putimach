@@ -62,7 +62,11 @@ function FrontendLayout() {
 /* Redirection helper to decoupled admin sub-app */
 function AdminRedirect() {
   useEffect(() => {
-    window.location.href = '/admin/';
+    if (window.location.port === '5173' || (window.location.hostname === 'localhost' && window.location.port !== '5174')) {
+      window.location.href = 'http://localhost:5174/';
+    } else {
+      window.location.href = '/admin/index.html';
+    }
   }, []);
 
   return (
