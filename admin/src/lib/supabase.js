@@ -39,6 +39,19 @@ const ORDERS_DB_TABLES = new Set([
   'retained_cancelled_ips',
   'users',
   'user_roles',
+  'inventory',
+  'toy_box_inventory',
+  'daily_tasks',
+  'task_completions',
+  'assigned_tasks',
+  'task_activity_logs',
+  'notifications',
+  'system_configs',
+  'ads_campaigns',
+  'content_plans',
+  'content_activity_logs',
+  'finance_planning',
+  'factory_logs',
 ]);
 
 // Transparent routing proxy to support multi-database split
