@@ -46,8 +46,8 @@ export const BrandingProvider = ({ children }) => {
     try {
       const config = await api.getSystemConfig(BRANDING_CONFIG_KEY);
       persistBranding(config);
-    } catch (error) {
-      console.error('Failed to load branding config:', error);
+    } catch {
+      // Non-critical: defaults to PutiMach Admin if custom branding is not set in DB
     } finally {
       setIsLoading(false);
     }

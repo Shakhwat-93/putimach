@@ -187,7 +187,8 @@ function App() {
     if (isNativeApp()) {
       return <HashRouter>{children}</HashRouter>;
     }
-    return <BrowserRouter basename="/admin">{children}</BrowserRouter>;
+    const hasAdminPrefix = window.location.pathname.startsWith('/admin');
+    return <BrowserRouter basename={hasAdminPrefix ? '/admin' : ''}>{children}</BrowserRouter>;
   };
 
   useEffect(() => {
