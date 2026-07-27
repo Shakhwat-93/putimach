@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "PutiMach Fashion",
+  "short_name": "PutiMach",
+  "description": "Premium Vintage Fashion & Heritage Craft",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1C1613",
+  "theme_color": "#C5A880",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
