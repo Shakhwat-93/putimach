@@ -424,7 +424,7 @@ export const ModeratorPanel = () => {
       {/* Orders Table */}
       <Card className="table-card liquid-glass" noPadding>
         {/* ── Desktop Table ── */}
-        <div className="orders-table-wrapper">
+        <div className="orders-table-wrapper desktop-only">
           <table className="management-table premium-table">
             <thead>
               <tr>
@@ -459,7 +459,7 @@ export const ModeratorPanel = () => {
         </div>
 
         {/* ── Mobile Order Cards ── */}
-        <div className="mod-mobile-list">
+        <div className="mod-mobile-list mobile-only">
           {filteredOrders.length === 0 && (
             <div className="mod-mobile-empty">No orders found matching your filters.</div>
           )}

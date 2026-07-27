@@ -315,7 +315,7 @@ export const SteadfastPanel = () => {
           )}
         </div>
 
-        <div className="courier-table-wrapper">
+        <div className="courier-table-wrapper desktop-only">
           <table className="order-table">
             <thead>
               <tr>
@@ -434,6 +434,93 @@ export const SteadfastPanel = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Luxury Card View */}
+        <div className="courier-mobile-list mobile-only">
+          <AnimatePresence mode="popLayout">
+            {steadfastOrders.map(order => (
+              <motion.div
+                key={order.id}
+                layout
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className={`courier-mobile-card ${selectedIds.has(order.id) ? 'row-selected' : ''} ${isOrderUnread(order) ? 'route-unread-card' : ''}`}
+                onClick={() => handleRowClick(order)}
+              >
+                <div className="mobile-card-top">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedIds.has(order.id)} 
+                      onChange={(e) => toggleSelect(e, order.id)} 
+                      onClick={(e) => e.stopPropagation()} 
+                    />
+                    <div className="route-read-card-header">
+                      {isOrderUnread(order) && <span className="route-unread-dot" aria-label="Unread order" />}
+                      <span className="order-id">#{String(order.id).replace('ORD-', '')}</span>
+                      {isOrderUnread(order) && <span className="route-unread-chip">New</span>}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span className={`courier-pill ${String(order.courier_name || '').toLowerCase() === 'pathao' ? 'pathao-pill' : 'steadfast-pill'}`}>
+                      {String(order.courier_name || 'S-FAST').toUpperCase()}
+                    </span>
+                    <Badge variant={getStatusVariant(order.courier_status)}>
+                      {order.courier_status || 'Handover'}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="customer-primary-box">
+                  <h3 className="customer-name-large">{order.customer_name}</h3>
+                  <div className="phone-row"><Phone size={12} /> {order.phone}</div>
+                  <div className="phone-row" style={{ marginTop: '2px', fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>
+                    <MapPin size={12} /> {order.address}
+                  </div>
+                </div>
+
+                <div className="details-grid-elite">
+                  <div className="detail-box-elite">
+                    <span className="detail-label">Tracking ID</span>
+                    <span className="detail-value product">{order.tracking_id || 'Unassigned'}</span>
+                  </div>
+                  <div className="detail-box-elite">
+                    <span className="detail-label">Consignment ID</span>
+                    <span className="detail-value">{order.courier_assigned_id || 'Waiting Sync'}</span>
+                  </div>
+                  <div className="detail-box-elite">
+                    <span className="detail-label">Dispatched</span>
+                    <span className="detail-value">{order.dispatched_at ? new Date(order.dispatched_at).toLocaleDateString() : 'N/A'}</span>
+                  </div>
+                  <div className="detail-box-elite">
+                    <span className="detail-label">Product</span>
+                    <span className="detail-value">{order.product_name || 'Item'}</span>
+                  </div>
+                </div>
+
+                <div style={{ padding: '10px 14px 14px', display: 'flex', gap: '8px' }}>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={(e) => { e.stopPropagation(); handleSyncStatus(order.id, order.tracking_id); }}
+                    disabled={syncStatus[order.id] === 'syncing' || !order.tracking_id}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', height: '36px', borderRadius: '10px', fontSize: '0.8rem' }}
+                  >
+                    <RefreshCw size={14} className={syncStatus[order.id] === 'syncing' ? 'animate-spin' : ''} />
+                    <span>{syncStatus[order.id] === 'syncing' ? 'Syncing...' : 'Sync Courier Status'}</span>
+                  </Button>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {steadfastOrders.length === 0 && (
+            <div style={{ padding: '40px 16px', textAlign: 'center', opacity: 0.5 }}>
+              <Package size={36} style={{ margin: '0 auto 10px' }} />
+              <p>No logistics entries match the selected filter.</p>
+            </div>
+          )}
         </div>
       </Card>
 
