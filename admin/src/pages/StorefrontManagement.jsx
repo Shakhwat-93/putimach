@@ -745,8 +745,7 @@ export const StorefrontManagement = () => {
     try {
       const { data: invData, error: invErr } = await supabase
         .from('inventory')
-        .select('id, name, sku, current_stock, variants')
-        .order('name', { ascending: true });
+        .select('*');
       if (invErr) throw invErr;
       setInventoryItems(invData || []);
     } catch (err) {
