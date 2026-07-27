@@ -668,3 +668,42 @@
   color: #fff;
 }
 
+@media (max-width: 767px) {
+  .table-search-bar,
+  .courier-filters-row {
+    padding: 12px 14px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .elite-search-wrapper {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .premium-filter-select {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .courier-date-filter {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .courier-date-filter .pill-btn {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+  }
+}
+

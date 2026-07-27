@@ -204,17 +204,16 @@
 .orders-table-wrapper {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  /* clip any overflow — the wrapper itself may scroll but parent won't */
   width: 100%;
 }
 
 /* ── Core table: FIXED layout — mandatory for column width control ── */
 .management-table {
   width: 100%;
-  min-width: 0;         /* do NOT set a min-width that causes overflow */
+  min-width: 0;
   border-collapse: separate;
   border-spacing: 0;
-  table-layout: fixed;  /* fixed = columns respect explicit widths */
+  table-layout: fixed;
 }
 
 /* ── Header ── */
@@ -248,21 +247,9 @@
   font-size: 0.78rem;
   color: var(--ob-text);
   background: var(--ob-card);
-  max-width: 0;          /* forces ellipsis to kick in with table-layout:fixed */
+  max-width: 0;
 }
 .management-table tbody tr:last-child td { border-bottom: none; }
-
-/*
-  ── Column widths  ──────────────────────────────────────────────
-  Target viewport: 1366px wide, sidebar ~220px → content ~1120px
-  We must fit ALL columns within 1100px.
-
-  Sum (visible at 1366px):
-  32 + 70 + 95 + 140 + 115 + 82 + 105 + 80 + 68  = 787px  ✓
-  (Items + Delivery hidden below 1280px)
-  Full (all cols):
-  32 + 70 + 95 + 140 + 115 + 82 + 75 + 105 + 80 + 68 = 862px  ✓ (with items)
-  ────────────────────────────────────────────────────────────── */
 
 .checkbox-col, .checkbox-cell { width: 28px; }
 .id-col,       .id-cell       { width: 130px; min-width: 130px; }
@@ -279,25 +266,19 @@
 .phone-col,    .phone-cell    { width: 100px; }
 .sla-col,      .sla-cell      { width: 100px; }
 
-/* ── Progressive hiding: shed columns to save space ── */
 @media (max-width: 1340px) {
-  /* hide Items col */
   th.items-col, td.items-cell { display: none; }
 }
 @media (max-width: 1240px) {
-  /* hide Delivery col */
   th.shipping-col, td.shipping-cell { display: none; }
 }
 @media (max-width: 1100px) {
-  /* hide Response Timer col */
   th.response-timer-col, td.response-timer-cell { display: none; }
 }
 @media (max-width: 980px) {
-  /* hide Date col */
   th.date-col, td.date-cell { display: none; }
 }
 
-/* ── General cell text styles ── */
 .order-id-cell { font-weight: 700; color: var(--ob-accent); font-size: 0.8rem; }
 .customer-name { font-weight: 650; color: var(--ob-text); font-size: 0.875rem; }
 .phone-cell, .date-cell { font-size: 0.8rem; color: var(--ob-text-sub); font-weight: 500; }
@@ -473,13 +454,36 @@
 .action-divider-v { width: 1px; height: 22px; background: var(--ob-border); flex-shrink: 0; }
 
 @media (max-width: 767px) {
-  .elite-enterprise-header { flex-direction: column; align-items: flex-start; padding: 18px 20px; }
+  .elite-enterprise-header { flex-direction: column; align-items: flex-start; padding: 16px; width: 100%; box-sizing: border-box; }
   .header-actions-enterprise { width: 100%; flex-direction: column; gap: 8px; }
   .action-btn-green, .export-btn-light { width: 100% !important; justify-content: center !important; }
   .action-divider-v { display: none; }
-  .unified-filter-bar { flex-direction: column; align-items: flex-start; gap: 0; padding: 0 4px; }
-  .filter-search, .filter-select-group, .elite-select-wrapper { width: 100%; padding: 0 12px; border-bottom: 1px solid var(--ob-border-row); }
+  .unified-filter-bar { 
+    flex-direction: column; 
+    align-items: stretch; 
+    gap: 8px; 
+    padding: 12px; 
+    width: 100%; 
+    max-width: 100%; 
+    box-sizing: border-box; 
+    overflow: hidden; 
+  }
+  .filter-search, .filter-select-group, .elite-select-wrapper, .date-range-picker-container { 
+    width: 100% !important; 
+    min-width: 0 !important; 
+    max-width: 100% !important; 
+    padding: 6px 10px; 
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--ob-border-row); 
+  }
   .filter-divider { display: none; }
+  .scrollable-strip-wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+  }
 }
 
 @media (max-width: 450px) {
