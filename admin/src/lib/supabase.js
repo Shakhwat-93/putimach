@@ -52,6 +52,8 @@ const ORDERS_DB_TABLES = new Set([
   'content_activity_logs',
   'finance_planning',
   'factory_logs',
+  'backup_settings',
+  'backup_logs',
 ]);
 
 // Transparent routing proxy to support multi-database split
