@@ -1,9 +1,10 @@
-import './Card.css';
+import React from 'react';
+import { Card as ShadcnCard } from './ui/card';
 
 export const Card = ({ children, className = '', noPadding = false, ...props }) => {
   return (
-    <div className={`card shadow-sm ${noPadding ? '' : 'p-4'} ${className}`} {...props}>
+    <ShadcnCard noPadding={noPadding} className={className} {...props}>
       {children}
-    </div>
+    </ShadcnCard>
   );
 };

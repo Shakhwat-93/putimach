@@ -1,32 +1,20 @@
-import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
-import './Modal.css';
+import React from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 
-export const Modal = ({ isOpen, onClose, title, subtitle, children }) => {
-  if (!isOpen) return null;
-
-  const modalNode = (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <div className="modal-header-left">
-            <h2 className="modal-title">{title}</h2>
-            {subtitle && <p className="modal-subtitle">{subtitle}</p>}
-          </div>
-          <button className="modal-close-btn" onClick={onClose} title="Close">
-            <X size={18} strokeWidth={2.5} />
-          </button>
-        </div>
+export const Modal = ({ isOpen, onClose, title, subtitle, children, className = '' }) => {
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose?.()}>
+      <DialogContent onClose={onClose} className={className}>
+        {(title || subtitle) && (
+          <DialogHeader>
+            {title && <DialogTitle>{title}</DialogTitle>}
+            {subtitle && <DialogDescription>{subtitle}</DialogDescription>}
+          </DialogHeader>
+        )}
         <div className="modal-body">
           {children}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
-
-  if (typeof document === 'undefined') {
-    return modalNode;
-  }
-
-  return createPortal(modalNode, document.body);
 };

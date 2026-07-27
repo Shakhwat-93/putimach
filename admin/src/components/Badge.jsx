@@ -1,9 +1,10 @@
-import './Badge.css';
+import React from 'react';
+import { Badge as ShadcnBadge } from './ui/badge';
 
 export const Badge = ({ children, variant = 'default', className = '' }) => {
   return (
-    <span className={`badge badge-${variant} ${className}`}>
+    <ShadcnBadge variant={variant} className={className}>
       {children}
-    </span>
+    </ShadcnBadge>
   );
 };
