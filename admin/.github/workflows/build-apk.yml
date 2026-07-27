@@ -1,0 +1,64 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+
+    - name: Install dependencies
+      run: npm install --force > npm_install.log 2>&1
+
+    - name: Build Web App
+      env:
+        CI: false
+        VITE_APP_PLATFORM: native
+        VITE_SUPABASE_URL: https://drbpysumezfjbudxzxzj.supabase.co
+        VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyYnB5c3VtZXpmamJ1ZHh6eHpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5NzE0MzQsImV4cCI6MjA4ODU0NzQzNH0.Ki7U_uXoTxZ4B9x1ExBuYOnTBZwXS9acMkx7CzlT2sA
+      run: npm run build > npm_build.log 2>&1
+
+    - name: Sync Capacitor
+      run: npx cap sync android > cap_sync.log 2>&1
+
+    - name: Build APK
+      working-directory: ./android
+      run: |
+        sed -i -e 's/\r$//' gradlew
+        chmod +x ./gradlew
+        ./gradlew assembleDebug --stacktrace > ../gradle_build.log 2>&1 || true
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: OrderFlow-App-APK
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+
+    - name: Upload Debug Logs
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: Debug-Logs
+        path: |
+          npm_install.log
+          npm_build.log
+          cap_sync.log
+          gradle_build.log

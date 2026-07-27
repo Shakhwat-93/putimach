@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/pwa-192x192.svg" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/pwa-192x192.svg" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#7c4dff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PutiMach Admin" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>PutiMach Admin | Premium Dashboard</title>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          registration.unregister();
+        }
+      });
+    }
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script>
+    window.addEventListener('error', function(e) {
+      var root = document.getElementById('root');
+      if (root && (!root.children || root.children.length === 0)) {
+        var errDiv = document.createElement('div');
+        errDiv.style.cssText = 'position:fixed;inset:0;z-index:999999;background:#1C1613;color:#FDFBF7;font-family:sans-serif;padding:32px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;';
+        errDiv.innerHTML = '<h2 style="color:#C5A880;margin-bottom:12px;">PutiMach Admin Diagnostic Alert</h2><p style="color:#A5978E;max-width:600px;margin-bottom:20px;">A runtime error occurred in Admin Panel. Details below:</p><pre style="background:#241E1A;color:#E9E2D2;padding:16px;border-radius:8px;font-size:13px;max-width:90%;overflow-x:auto;text-align:left;">' + (e.message || e.error || 'Unknown script error') + '\nFile: ' + (e.filename || 'bundle') + ':' + (e.lineno || '0') + '</pre><button onclick="location.reload()" style="margin-top:20px;padding:10px 24px;background:#C5A880;color:#1C1613;border:none;border-radius:99px;font-weight:bold;cursor:pointer;">Reload Page</button>';
+        document.body.appendChild(errDiv);
+      }
+    });
+  </script>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
+</html>

@@ -1,0 +1,1179 @@
+import { useState, useEffect } from 'react';
+import { useOrders } from '../context/OrderContext';
+import { Card } from '../components/Card';
+import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Modal } from '../components/Modal';
+import CurrencyIcon from '../components/CurrencyIcon';
+import {
+  Search, Plus, Package, AlertTriangle, ArrowUpRight, ArrowDownRight,
+  Edit2, Trash2, Tag, Bot, Loader2, CheckCircle2, CircleAlert, ChevronDown, Sparkles,
+  TrendingUp, TrendingDown, DollarSign, BarChart2
+} from 'lucide-react';
+import { PremiumSearch } from '../components/PremiumSearch';
+import { usePersistentState } from '../utils/persistentState';
+import { getSerialTrackedProducts } from '../utils/productCatalog';
+import { supabase } from '../lib/supabase';
+import { useConfirmDialog } from '../hooks/useConfirmDialog';
+import './InventoryPage.css';
+
+const DEFAULT_CATEGORIES = ['TOY BOX', 'ORGANIZER', 'Bags', 'Accessories', 'Religious', 'Other'];
+
+export const InventoryPage = () => {
+  const { confirmDialog, showError, showSuccess, showWarning, showInfo, ConfirmDialogComponent } = useConfirmDialog();
+  const {
+    inventory,
+    toyBoxes,
+    loading,
+    addInventoryItem,
+    updateInventoryItem,
+    deleteInventoryItem,
+    adjustStock,
+    updateToyBoxStock,
+    addToyBoxStocks,
+    previewInvoiceStockUpdate,
+    applyInvoiceStockUpdate
+  } = useOrders();
+  const [searchTerm, setSearchTerm] = usePersistentState('panel:inventory:search', '');
+  const [categoryFilter, setCategoryFilter] = usePersistentState('panel:inventory:category', 'All');
+
+  const [dbCategories, setDbCategories] = useState([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('categories')
+          .select('name')
+          .order('name', { ascending: true });
+        if (!error && data) {
+          setDbCategories(data.map(c => c.name));
+        }
+      } catch (err) {
+        console.error('Error fetching categories for inventory page:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  const pageCategories = dbCategories.length > 0
+    ? ['All', ...dbCategories]
+    : ['All', ...DEFAULT_CATEGORIES];
+
+  // Modal states
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [isToyBoxModalOpen, setIsToyBoxModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [adjustingProduct, setAdjustingProduct] = useState(null);
+  const [adjustAmount, setAdjustAmount] = useState(1);
+  const [adjustType, setAdjustType] = useState('add'); // 'add' or 'deduct'
+  const [invoiceText, setInvoiceText] = useState('');
+  const [invoicePreview, setInvoicePreview] = useState(null);
+  const [invoiceError, setInvoiceError] = useState('');
+  const [isPreviewingInvoice, setIsPreviewingInvoice] = useState(false);
+  const [isApplyingInvoice, setIsApplyingInvoice] = useState(false);
+  const [confirmCommand] = useState('confirm');
+  const [useManualBulkMode, setUseManualBulkMode] = useState(true);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [invoiceStockMode, setInvoiceStockMode] = useState('add'); // 'add' or 'deduct'
+  const [toyBoxSerialInput, setToyBoxSerialInput] = useState('');
+  const [toyBoxInitialStock, setToyBoxInitialStock] = useState(0);
+  const [toyBoxProductName, setToyBoxProductName] = useState('');
+
+  const [sizesInput, setSizesInput] = useState('S, M, L, XL');
+  const [colorsInput, setColorsInput] = useState('Black, White, Grey');
+
+  const [formData, setFormData] = useState({
+    name: '', sku: '', category: 'Other', current_stock: 0, min_stock_level: 5,
+    unit_price: 0, selling_price: 0, making_cost: 0, supports_serial_tracking: false,
+    variants: []
+  });
+
+  const handleVariantChange = (index, field, value) => {
+    const updated = formData.variants.map((v, i) => {
+      if (i === index) return { ...v, [field]: value };
+      return v;
+    });
+    setFormData({ ...formData, variants: updated });
+  };
+
+  const removeVariantRow = (index) => {
+    const updated = formData.variants.filter((_, i) => i !== index);
+    setFormData({ ...formData, variants: updated });
+  };
+
+  const addVariantRow = () => {
+    const baseSku = (formData.sku || 'ITEM').toUpperCase();
+    const newVariant = {
+      size: '',
+      color: '',
+      sku: `${baseSku}-VAR-${formData.variants.length + 1}`,
+      stock: 10
+    };
+    setFormData({ ...formData, variants: [...formData.variants, newVariant] });
+  };
+
+  const generateVariantCombinations = () => {
+    const sizeList = sizesInput.split(',').map(s => s.trim()).filter(Boolean);
+    const colorList = colorsInput.split(',').map(c => c.trim()).filter(Boolean);
+    
+    if (sizeList.length === 0 && colorList.length === 0) {
+      showWarning('Please enter some Sizes or Colors to generate combinations.', 'Input Required');
+      return;
+    }
+
+    const combinations = [];
+    const baseSku = (formData.sku || formData.name.toLowerCase().replace(/\s+/g, '-')).toUpperCase();
+    
+    if (sizeList.length > 0 && colorList.length > 0) {
+      sizeList.forEach(sz => {
+        colorList.forEach(cl => {
+          combinations.push({
+            size: sz,
+            color: cl,
+            sku: `${baseSku}-${sz.toUpperCase()}-${cl.toUpperCase()}`,
+            stock: 10
+          });
+        });
+      });
+    } else if (sizeList.length > 0) {
+      sizeList.forEach(sz => {
+        combinations.push({
+          size: sz,
+          color: '',
+          sku: `${baseSku}-${sz.toUpperCase()}`,
+          stock: 10
+        });
+      });
+    } else {
+      colorList.forEach(cl => {
+        combinations.push({
+          size: '',
+          color: cl,
+          sku: `${baseSku}-${cl.toUpperCase()}`,
+          stock: 10
+        });
+      });
+    }
+
+    setFormData({ ...formData, variants: combinations });
+  };
+
+  const handleOpenProductModal = (product = null) => {
+    setSizesInput('S, M, L, XL');
+    setColorsInput('Black, White, Grey');
+    if (product) {
+      setEditingProduct(product);
+      setFormData({
+        name: product.name,
+        sku: product.sku || '',
+        category: product.category || 'Other',
+        current_stock: product.current_stock,
+        min_stock_level: product.min_stock_level,
+        unit_price: product.unit_price,
+        selling_price: Number(product.selling_price) || Number(product.unit_price) || 0,
+        making_cost: Number(product.making_cost) || 0,
+        supports_serial_tracking: Boolean(product.supports_serial_tracking ?? (product.category === 'TOY BOX')),
+        variants: Array.isArray(product.variants) ? product.variants : []
+      });
+    } else {
+      setEditingProduct(null);
+      setFormData({
+        name: '', sku: '', category: 'Other', current_stock: 0, min_stock_level: 5,
+        unit_price: 0, selling_price: 0, making_cost: 0, supports_serial_tracking: false,
+        variants: []
+      });
+    }
+    setIsProductModalOpen(true);
+  };
+
+  const handleSaveProduct = async (e) => {
+    e.preventDefault();
+    const hasVariants = formData.variants && formData.variants.length > 0;
+    const finalStock = hasVariants
+      ? formData.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
+      : formData.current_stock;
+      
+    const payload = {
+      ...formData,
+      current_stock: finalStock
+    };
+
+    if (editingProduct) {
+      await updateInventoryItem(editingProduct.id, payload);
+    } else {
+      await addInventoryItem(payload);
+    }
+    setIsProductModalOpen(false);
+  };
+
+  const serialTrackedProducts = getSerialTrackedProducts(inventory);
+  const toyBoxGroups = (toyBoxes || []).reduce((acc, item) => {
+    const key = item.product_name || 'TOY BOX';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(item);
+    return acc;
+  }, {});
+
+  const filteredInventory = inventory.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.sku && item.sku.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesCategory = categoryFilter === 'All' || item.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  // --- Computed P&L stats across all inventory ---
+  const totalInventoryValue = inventory.reduce((s, i) => s + ((Number(i.selling_price) || Number(i.unit_price) || 0) * (Number(i.current_stock) || 0)), 0);
+  const totalCOGSValue      = inventory.reduce((s, i) => s + ((Number(i.making_cost) || 0) * (Number(i.current_stock) || 0)), 0);
+
+  const lowStockItems = inventory.filter(item => item.current_stock <= item.min_stock_level);
+  const outOfStockItems = inventory.filter(item => item.current_stock === 0);
+
+  const handleOpenAdjustModal = (product) => {
+    setAdjustingProduct(product);
+    setAdjustAmount(1);
+    setAdjustType('add');
+    setIsAdjustModalOpen(true);
+  };
+
+  const handleAdjustStock = async () => {
+    const amount = adjustType === 'add' ? adjustAmount : -adjustAmount;
+    await adjustStock(adjustingProduct.id, amount);
+    setIsAdjustModalOpen(false);
+  };
+
+  const handleDeleteProduct = (id) => {
+    confirmDialog({
+      title: 'Delete Product',
+      description: 'Are you sure you want to delete this product? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      isDanger: true,
+      onConfirm: async () => { await deleteInventoryItem(id); },
+    });
+  };
+
+  const handleAddToyBoxSerials = async (e) => {
+    e.preventDefault();
+
+    if (!toyBoxProductName) {
+      showWarning('Select a product for these serials.', 'Validation Error');
+      return;
+    }
+
+    const requested = toyBoxSerialInput
+      .split(/[,\s]+/)
+      .map((value) => parseInt(value.trim(), 10))
+      .filter((value) => Number.isInteger(value) && value > 0);
+
+    const uniqueRequested = [...new Set(requested)];
+    const existing = new Set(
+      (toyBoxes || [])
+        .filter((box) => (box.product_name || 'TOY BOX') === toyBoxProductName)
+        .map((box) => Number(box.toy_box_number))
+    );
+    const entries = uniqueRequested
+      .filter((serial) => !existing.has(serial))
+      .map((serial) => ({
+        product_name: toyBoxProductName,
+        toy_box_number: serial,
+        stock_quantity: toyBoxInitialStock
+      }));
+
+    if (entries.length === 0) {
+      showInfo('No new serial numbers found to add.', 'Nothing to Add');
+      return;
+    }
+
+    try {
+      await addToyBoxStocks(entries);
+      setToyBoxSerialInput('');
+      setToyBoxInitialStock(0);
+      setToyBoxProductName('');
+      setIsToyBoxModalOpen(false);
+    } catch (error) {
+      console.error('Failed to add toy box serials:', error);
+      showError(error?.message || 'Failed to add serial numbers. Please try again.', 'Add Serials Failed');
+    }
+  };
+
+  const handleOpenInvoiceModal = () => {
+    setIsInvoiceModalOpen(true);
+    setInvoiceError('');
+    setInvoicePreview(null);
+    setIsReviewModalOpen(false);
+    setInvoiceStockMode('add');
+  };
+
+  const handlePreviewInvoice = async () => {
+    if (!invoiceText.trim()) {
+      setInvoiceError('Please paste invoice lines first.');
+      return;
+    }
+
+    setIsPreviewingInvoice(true);
+    setInvoiceError('');
+    try {
+      const preview = await previewInvoiceStockUpdate(invoiceText, { preferManualBulk: useManualBulkMode, stockMode: invoiceStockMode });
+      setInvoicePreview(preview);
+    } catch (error) {
+      setInvoiceError(error?.message || 'Failed to analyze invoice.');
+      setInvoicePreview(null);
+    } finally {
+      setIsPreviewingInvoice(false);
+    }
+  };
+
+  const handleApplyInvoiceSync = async () => {
+    if (!invoicePreview) {
+      await handlePreviewInvoice();
+      return;
+    }
+    setInvoiceError('');
+    setIsReviewModalOpen(true);
+  };
+
+  const [reviewError, setReviewError] = useState('');
+  const [invoiceSuccess, setInvoiceSuccess] = useState('');
+
+  const handleFinalConfirmApply = async () => {
+    if (!invoicePreview || !(invoicePreview?.matched?.length > 0)) return;
+
+    setIsApplyingInvoice(true);
+    setReviewError('');
+    setInvoiceError('');
+    try {
+      const result = await applyInvoiceStockUpdate(invoiceText, {
+        preferManualBulk: useManualBulkMode,
+        confirmCommand,
+        stockMode: invoiceStockMode
+      });
+      const appliedCount = result?.applied?.length || result?.matched?.length || 0;
+      const totalChanged = result?.summary?.totalDeducted || result?.summary?.totalQty || 0;
+      const modeLabel = invoiceStockMode === 'add' ? 'added' : 'deducted';
+
+      // Close both modals
+      setIsReviewModalOpen(false);
+      setIsInvoiceModalOpen(false);
+
+      // Reset all invoice state
+      setInvoiceText('');
+      setInvoicePreview(null);
+      setInvoiceError('');
+      setReviewError('');
+
+      // Show success feedback
+      setInvoiceSuccess(`✅ Stock updated successfully! ${appliedCount} item(s) affected, ${totalChanged} total units ${modeLabel}.`);
+      setTimeout(() => setInvoiceSuccess(''), 6000);
+    } catch (error) {
+      console.error('Invoice apply error:', error);
+      setReviewError(error?.message || 'Failed to apply inventory update from invoice.');
+    } finally {
+      setIsApplyingInvoice(false);
+    }
+  };
+
+  return (
+    <div className="inventory-page">
+      <div className="page-header">
+        <div>
+          <h1 className="premium-title">Inventory Management</h1>
+          <p className="page-subtitle">Monitor stock levels, manage products, and track warehouse movements.</p>
+        </div>
+        <div className="inventory-header-actions">
+          <Button variant="ghost" onClick={handleOpenInvoiceModal} className="ai-sync-btn">
+            <Bot size={18} /> <span>AI Invoice Sync</span>
+          </Button>
+          <Button variant="primary" onClick={() => handleOpenProductModal()} className="add-product-btn">
+            <Plus size={18} /> <span>Add New Product</span>
+          </Button>
+        </div>
+      </div>
+
+      {invoiceSuccess && (
+        <div className="invoice-success-toast">
+          <CheckCircle2 size={18} />
+          <span>{invoiceSuccess}</span>
+        </div>
+      )}
+
+      <div className="inventory-stats">
+        <Card className="stat-card glass-card">
+          <div className="stat-icon-box blue">
+            <Package size={22} />
+          </div>
+          <div className="stat-info">
+            <span className="label">Total Products</span>
+            <span className="value">{inventory.length}</span>
+          </div>
+        </Card>
+        <Card className="stat-card glass-card">
+          <div className="stat-icon-box orange">
+            <AlertTriangle size={22} />
+          </div>
+          <div className="stat-info">
+            <span className="label">Low Stock Items</span>
+            <span className="value">{lowStockItems.length}</span>
+          </div>
+        </Card>
+        <Card className="stat-card glass-card">
+          <div className="stat-icon-box red">
+            <Package size={22} />
+          </div>
+          <div className="stat-info">
+            <span className="label">Out of Stock</span>
+            <span className="value">{outOfStockItems.length}</span>
+          </div>
+        </Card>
+        <Card className="stat-card glass-card">
+          <div className="stat-icon-box green">
+            <TrendingUp size={22} />
+          </div>
+          <div className="stat-info">
+            <span className="label">Stock Value (Retail)</span>
+            <span className="value">৳{totalInventoryValue.toLocaleString()}</span>
+          </div>
+        </Card>
+        <Card className="stat-card glass-card">
+          <div className="stat-icon-box purple">
+            <BarChart2 size={22} />
+          </div>
+          <div className="stat-info">
+            <span className="label">Stock COGS (Cost)</span>
+            <span className="value">৳{totalCOGSValue.toLocaleString()}</span>
+          </div>
+        </Card>
+      </div>
+
+      <div className="inventory-controls-strip">
+        <div className="unified-filter-bar glass">
+          <PremiumSearch
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search products by name or SKU..."
+            suggestions={
+              searchTerm ? (inventory || []).filter(p => 
+                p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                p.sku?.toLowerCase().includes(searchTerm.toLowerCase())
+              ).slice(0, 5).map(p => ({
+                id: p.id,
+                label: p.name,
+                sub: `SKU: ${p.sku || 'N/A'} — Stock: ${p.current_stock}`,
+                type: 'product',
+                original: p
+              })) : []
+            }
+            onSuggestionClick={(item) => {
+              if (item.type === 'product') {
+                setSearchTerm(item.label);
+              }
+            }}
+          />
+          <div className="filter-divider"></div>
+          <div className="category-scroll-container">
+            <div className="category-tabs-mini">
+              {pageCategories.map(cat => (
+                <button
+                  key={cat}
+                  className={`mini-tab ${categoryFilter === cat ? 'active' : ''}`}
+                  onClick={() => setCategoryFilter(cat)}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Card className="table-card premium-glass" noPadding>
+        <div className="table-container">
+          <table className="management-table">
+            <thead>
+              <tr>
+                <th>Product Information</th>
+                <th>Category</th>
+                <th>Price / Cost</th>
+                <th>Margin</th>
+                <th>Stock Availability</th>
+                <th>Status</th>
+                <th className="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredInventory.map(item => {
+                const stockStatus = item.current_stock === 0 ? 'Out of Stock' :
+                  item.current_stock <= item.min_stock_level ? 'Low Stock' : 'In Stock';
+                const statusVariant = stockStatus === 'Out of Stock' ? 'danger' :
+                  stockStatus === 'Low Stock' ? 'warning' : 'success';
+
+                // Stock progress bar calculation
+                const maxRef = Math.max(item.min_stock_level * 4, item.current_stock, 10);
+                const stockPercent = Math.min((item.current_stock / maxRef) * 100, 100);
+
+                // Profit margin calculation
+                const sellingPrice = Number(item.selling_price) || Number(item.unit_price) || 0;
+                const makingCost   = Number(item.making_cost) || 0;
+                const marginPct    = sellingPrice > 0 ? ((sellingPrice - makingCost) / sellingPrice * 100) : 0;
+                const isProfit     = marginPct >= 0;
+
+                return (
+                  <tr key={item.id} className="inventory-row">
+                    <td data-label="Product">
+                      <div className="product-info-cell">
+                        <div className="product-avatar">
+                          <Package size={20} />
+                        </div>
+                        <div className="product-meta">
+                          <span className="product-name">{item.name}</span>
+                          <span className="product-sku">{item.sku || 'No SKU'}</span>
+                          {Array.isArray(item.variants) && item.variants.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                              {item.variants.map((v, i) => (
+                                <span 
+                                  key={i} 
+                                  style={{ 
+                                    fontSize: '9px', 
+                                    padding: '2px 6px', 
+                                    borderRadius: '4px', 
+                                    backgroundColor: 'rgba(255,255,255,0.03)', 
+                                    border: '1px solid rgba(255,255,255,0.05)', 
+                                    color: 'var(--st-text-secondary)',
+                                    fontFamily: 'monospace'
+                                  }}
+                                >
+                                  {v.size || '—'}/{v.color || '—'}: <b>{v.stock}</b>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td data-label="Category"><span className="category-pill">{item.category}</span></td>
+                    <td data-label="Price / Cost">
+                      <div className="price-cost-cell">
+                        <div className="price-cell">
+                          <CurrencyIcon size={11} className="currency-icon-elite" />
+                          <span className="amount-val">{sellingPrice.toLocaleString()}</span>
+                        </div>
+                        {makingCost > 0 && (
+                          <div className="cost-cell">
+                            <span className="cost-label">Cost: </span>
+                            <span className="cost-val">৳{makingCost.toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td data-label="Margin">
+                      {sellingPrice > 0 ? (
+                        <span className={`margin-badge ${isProfit ? 'profit' : 'loss'}`}>
+                          {isProfit ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                          {marginPct.toFixed(1)}%
+                        </span>
+                      ) : (
+                        <span className="margin-badge neutral">—</span>
+                      )}
+                    </td>
+                    <td data-label="Stock">
+                      <div className="stock-visual-group">
+                        <div className="stock-labels">
+                          <span className="stock-count"><b>{item.current_stock}</b> items</span>
+                          <span className="stock-min-label">Min: {item.min_stock_level}</span>
+                        </div>
+                        <div className="stock-progress-track">
+                          <div
+                            className={`stock-progress-bar ${statusVariant}`}
+                            style={{ width: `${stockPercent}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td data-label="Status">
+                      <Badge variant={statusVariant} size="sm">{stockStatus}</Badge>
+                    </td>
+                    <td data-label="Actions" className="text-right">
+                      <div className="inventory-actions">
+                        <button className="action-btn adjust" onClick={() => handleOpenAdjustModal(item)} title="Update Stock">
+                          <Plus size={16} /> Stock
+                        </button>
+                        <button className="icon-action-btn edit" onClick={() => handleOpenProductModal(item)} title="Edit Product">
+                          <Edit2 size={16} />
+                        </button>
+                        <button className="icon-action-btn delete" onClick={() => handleDeleteProduct(item.id)} title="Remove">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {!loading && filteredInventory.length === 0 && (
+                <tr>
+                  <td colSpan="6" className="empty-state-cell">
+                    <div className="empty-state-content">
+                      <Search size={40} />
+                      <h3>No products found</h3>
+                      <p>Try adjusting your search or category filters.</p>
+                      <Button variant="ghost" onClick={() => { setSearchTerm(''); setCategoryFilter('All'); }}>
+                        Clear All Filters
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* Toy Box Special Inventory Section */}
+      <div className="toy-box-inventory-section">
+        <div className="section-header">
+          <div className="title-group">
+            <Tag size={20} className="accent-icon" />
+            <h2>Serial Stock Products ({toyBoxes.length} Serials)</h2>
+          </div>
+          <div className="inventory-header-actions">
+            <p>Each serial is now tracked per product, so identical serial numbers can exist in different products.</p>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setToyBoxProductName(serialTrackedProducts[0]?.name || '');
+                setIsToyBoxModalOpen(true);
+              }}
+              className="add-product-btn"
+            >
+              <Plus size={18} /> <span>Add Serials</span>
+            </Button>
+          </div>
+        </div>
+
+        <div className="toy-box-grid-management">
+          {Object.entries(toyBoxGroups)
+            .sort(([left], [right]) => left.localeCompare(right))
+            .map(([productName, productBoxes]) => (
+              <div key={productName} className="toy-box-product-group">
+                <div className="toy-box-product-heading">
+                  <span>{productName}</span>
+                  <Badge variant="default" size="sm">{productBoxes.length} serials</Badge>
+                </div>
+                <div className="toy-box-grid-management">
+                  {[...productBoxes]
+                    .sort((a, b) => a.toy_box_number - b.toy_box_number)
+                    .map((box) => (
+                      <div key={box.id} className={`toy-box-stock-card ${box.stock_quantity === 0 ? 'out' : box.stock_quantity <= 5 ? 'low' : ''}`}>
+                        <div className="box-num-badge">#{box.toy_box_number}</div>
+                        <div className="stock-input-wrap">
+                          <input
+                            type="number"
+                            min="0"
+                            defaultValue={box.stock_quantity}
+                            onBlur={(e) => {
+                              const newVal = parseInt(e.target.value, 10);
+                              if (!isNaN(newVal) && newVal !== box.stock_quantity) {
+                                updateToyBoxStock(box.id, newVal);
+                              }
+                            }}
+                            className="stock-edit-input"
+                          />
+                          <span className="unit-label">pcs</span>
+                        </div>
+                        <div className="stock-status-dot"></div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
+
+      {/* Product Modals remain functional but will look better with updated CSS */}
+      <Modal
+        isOpen={isProductModalOpen}
+        onClose={() => setIsProductModalOpen(false)}
+        title={editingProduct ? 'Edit Product Details' : 'Register New Product'}
+        subtitle={editingProduct ? 'Refine inventory details, stock thresholds, and price without breaking flow.' : 'Create a clean product record with pricing and stock logic.'}
+      >
+        <form onSubmit={handleSaveProduct} className="product-form premium-form product-modal-shell">
+          <div className="modal-hero-card">
+            <div className="modal-hero-icon product">
+              <Package size={20} />
+            </div>
+            <div className="modal-hero-copy">
+              <span className="modal-hero-eyebrow">Catalog Setup</span>
+              <h3 className="modal-hero-title">{editingProduct ? 'Polish this inventory record' : 'Add a new product with confidence'}</h3>
+              <p className="modal-hero-text">Keep identity, stock alerts, and pricing structured so inventory stays clean, searchable, and premium.</p>
+            </div>
+          </div>
+
+          <section className="inventory-form-section">
+            <div className="inventory-form-section-head">
+              <span className="section-kicker">Product Identity</span>
+              <p>Define how the item appears across search, category filters, and table rows.</p>
+            </div>
+            <Input label="Product Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required placeholder="Enter full product name" />
+            <div className="form-grid">
+              <Input label="SKU / Identifier" value={formData.sku} onChange={(e) => setFormData({ ...formData, sku: e.target.value })} placeholder="SKU-XXX" />
+              <div className="elite-select-wrapper inventory-elite-select-wrapper">
+                <label className="input-label">Category</label>
+                <select className="elite-select inventory-elite-select" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })}>
+                  {pageCategories.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <ChevronDown size={14} className="elite-select-chevron" />
+              </div>
+            </div>
+          </section>
+
+          <section className="inventory-form-section">
+            <div className="inventory-form-section-head">
+              <span className="section-kicker">Stock & Pricing</span>
+              <p>Set quantity thresholds, selling price, and production cost for profit tracking.</p>
+            </div>
+            <div className="form-grid">
+              <Input
+                label="Initial Inventory"
+                type="number"
+                value={formData.variants?.length > 0
+                  ? formData.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
+                  : formData.current_stock
+                }
+                onChange={(e) => setFormData({ ...formData, current_stock: parseInt(e.target.value) || 0 })}
+                required
+                disabled={formData.variants?.length > 0}
+                hint={formData.variants?.length > 0 ? "Calculated from variants stock below" : null}
+              />
+              <Input label="Min Alert Level" type="number" value={formData.min_stock_level} onChange={(e) => setFormData({ ...formData, min_stock_level: parseInt(e.target.value) || 0 })} required />
+            </div>
+            <div className="form-grid">
+              <Input
+                label={<>Selling Price (<CurrencyIcon size={12} className="currency-icon-elite" />)</>}
+                type="number"
+                value={formData.selling_price}
+                onChange={(e) => setFormData({ ...formData, selling_price: parseFloat(e.target.value) || 0 })}
+                required
+                placeholder="Customer-facing price"
+              />
+              <Input
+                label={<>Making Cost (<CurrencyIcon size={12} className="currency-icon-elite" />) — Production</>}
+                type="number"
+                value={formData.making_cost}
+                onChange={(e) => setFormData({ ...formData, making_cost: parseFloat(e.target.value) || 0 })}
+                placeholder="Your cost to produce"
+              />
+            </div>
+
+            {/* Live Profit Margin Preview */}
+            {formData.selling_price > 0 && (() => {
+              const sp  = Number(formData.selling_price) || 0;
+              const mc  = Number(formData.making_cost)   || 0;
+              const pct = sp > 0 ? ((sp - mc) / sp * 100) : 0;
+              const profit = sp - mc;
+              return (
+                <div className={`margin-preview-card ${profit >= 0 ? 'profit' : 'loss'}`}>
+                  <div className="margin-preview-row">
+                    <span>Profit per Unit</span>
+                    <strong className={profit >= 0 ? 'green' : 'red'}>৳{profit.toLocaleString()}</strong>
+                  </div>
+                  <div className="margin-preview-row">
+                    <span>Profit Margin</span>
+                    <strong className={profit >= 0 ? 'green' : 'red'}>{pct.toFixed(1)}%</strong>
+                  </div>
+                </div>
+              );
+            })()}
+          </section>
+
+          {/* Product Variations Section */}
+          <section className="inventory-form-section" style={{ borderTop: '1px solid var(--st-border)', paddingTop: '20px' }}>
+            <div className="inventory-form-section-head">
+              <span className="section-kicker">Product Variations</span>
+              <p>Define size and color variants with specific stock. If variations are added, total stock calculates automatically.</p>
+            </div>
+            
+            {/* Bulk Generator Box */}
+            <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--st-border)', marginBottom: '16px' }}>
+              <span style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--st-brand)', display: 'block', marginBottom: '12px' }}>Bulk Variation Generator</span>
+              <div className="form-grid" style={{ gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label className="input-label" style={{ fontSize: '10px' }}>Sizes (comma separated)</label>
+                  <input
+                    type="text"
+                    className="st-input"
+                    style={{ padding: '8px 12px', fontSize: '12px' }}
+                    placeholder="S, M, L, XL"
+                    value={sizesInput}
+                    onChange={(e) => setSizesInput(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="input-label" style={{ fontSize: '10px' }}>Colors (comma separated)</label>
+                  <input
+                    type="text"
+                    className="st-input"
+                    style={{ padding: '8px 12px', fontSize: '12px' }}
+                    placeholder="Black, White, Grey"
+                    value={colorsInput}
+                    onChange={(e) => setColorsInput(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Button type="button" variant="ghost" size="sm" onClick={generateVariantCombinations}>
+                  Generate Combinations
+                </Button>
+              </div>
+            </div>
+
+            {/* Variations List */}
+            {(!formData.variants || formData.variants.length === 0) ? (
+              <div style={{ textAlign: 'center', padding: '24px 0', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '8px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--st-text-secondary)' }}>No variations added yet. Click Generate or Add Row to start.</p>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto', maxHeight: '240px', overflowY: 'auto', borderRadius: '8px', border: '1px solid var(--st-border)', backgroundColor: 'rgba(0,0,0,0.1)', padding: '8px' }}>
+                <table style={{ width: '100%', textAlign: 'left', fontSize: '12px', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--st-text-secondary)', textTransform: 'uppercase', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
+                      <th style={{ paddingBottom: '8px', paddingRight: '8px', fontWeight: '500' }}>Size</th>
+                      <th style={{ paddingBottom: '8px', paddingLeft: '8px', paddingRight: '8px', fontWeight: '500' }}>Color</th>
+                      <th style={{ paddingBottom: '8px', paddingLeft: '8px', paddingRight: '8px', fontWeight: '500' }}>SKU</th>
+                      <th style={{ paddingBottom: '8px', paddingLeft: '8px', paddingRight: '8px', fontWeight: '500' }}>Stock</th>
+                      <th style={{ paddingBottom: '8px', paddingLeft: '8px', fontWeight: '500', textAlign: 'right' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {formData.variants.map((v, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <td style={{ padding: '6px 8px 6px 0' }}>
+                          <input 
+                            type="text"
+                            className="st-input"
+                            style={{ padding: '4px 8px', fontSize: '12px', width: '100%' }}
+                            placeholder="e.g. S"
+                            value={v.size || ''}
+                            onChange={(e) => handleVariantChange(idx, 'size', e.target.value)}
+                          />
+                        </td>
+                        <td style={{ padding: '6px 8px' }}>
+                          <input 
+                            type="text"
+                            className="st-input"
+                            style={{ padding: '4px 8px', fontSize: '12px', width: '100%' }}
+                            placeholder="e.g. Black"
+                            value={v.color || ''}
+                            onChange={(e) => handleVariantChange(idx, 'color', e.target.value)}
+                          />
+                        </td>
+                        <td style={{ padding: '6px 8px' }}>
+                          <input 
+                            type="text"
+                            className="st-input"
+                            style={{ padding: '4px 8px', fontSize: '12px', width: '100%', fontFamily: 'monospace' }}
+                            placeholder="SKU"
+                            value={v.sku || ''}
+                            onChange={(e) => handleVariantChange(idx, 'sku', e.target.value)}
+                          />
+                        </td>
+                        <td style={{ padding: '6px 8px', width: '90px' }}>
+                          <input 
+                            type="number"
+                            className="st-input"
+                            style={{ padding: '4px 8px', fontSize: '12px', width: '100%' }}
+                            placeholder="0"
+                            value={v.stock}
+                            onChange={(e) => handleVariantChange(idx, 'stock', Number(e.target.value) || 0)}
+                          />
+                        </td>
+                        <td style={{ padding: '6px 0 6px 8px', textAlign: 'right' }}>
+                          <button 
+                            type="button"
+                            onClick={() => removeVariantRow(idx)}
+                            style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '8px' }}>
+              <Button type="button" variant="ghost" size="sm" onClick={addVariantRow}>
+                + Add Row
+              </Button>
+            </div>
+          </section>
+
+          <label className="feature-toggle-row">
+            <input
+              type="checkbox"
+              checked={formData.supports_serial_tracking}
+              onChange={(e) => setFormData({ ...formData, supports_serial_tracking: e.target.checked })}
+            />
+            <span className="feature-toggle-copy">
+              <strong>Enable serial-wise stock tracking</strong>
+              <small>Use this for products that need per-unit inventory control like Toy Box variants.</small>
+            </span>
+          </label>
+
+          <div className="modal-footer-actions">
+            <Button variant="ghost" type="button" onClick={() => setIsProductModalOpen(false)}>Cancel</Button>
+            <Button variant="primary" type="submit" className="save-btn">{editingProduct ? 'Update Product' : 'Save Product'}</Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={isAdjustModalOpen} onClose={() => setIsAdjustModalOpen(false)} title="Quick Inventory Adjustment">
+        <div className="adjust-stock-content premium-adjust">
+          <div className="adjust-header">
+            <div className="product-chip">{adjustingProduct?.category}</div>
+            <h3>{adjustingProduct?.name}</h3>
+            <span className="current-badge">Current Stock: {adjustingProduct?.current_stock}</span>
+          </div>
+
+          <div className="adjust-mode-toggle">
+            <button className={`mode-btn restock ${adjustType === 'add' ? 'active' : ''}`} onClick={() => setAdjustType('add')}>
+              <ArrowUpRight size={18} /> <span>Restock</span>
+            </button>
+            <button className={`mode-btn deduct ${adjustType === 'deduct' ? 'active' : ''}`} onClick={() => setAdjustType('deduct')}>
+              <ArrowDownRight size={18} /> <span>Deduct</span>
+            </button>
+          </div>
+
+          <div className="quantity-entry">
+            <Input label="Adjustment Quantity" type="number" min="1" value={adjustAmount} onChange={(e) => setAdjustAmount(parseInt(e.target.value))} />
+          </div>
+
+          <div className="modal-footer-actions">
+            <Button variant="ghost" type="button" onClick={() => setIsAdjustModalOpen(false)}>Cancel</Button>
+            <Button variant="primary" onClick={handleAdjustStock} className="confirm-btn">Confirm Transaction</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={isToyBoxModalOpen} onClose={() => setIsToyBoxModalOpen(false)} title="Add Toy Box Serials">
+        <form onSubmit={handleAddToyBoxSerials} className="product-form premium-form">
+          <div className="elite-select-wrapper">
+            <label className="input-label">Product</label>
+            <select className="elite-select" value={toyBoxProductName} onChange={(e) => setToyBoxProductName(e.target.value)} required>
+              <option value="">Select serial-tracked product</option>
+              {serialTrackedProducts.map((product) => <option key={product.name} value={product.name}>{product.name}</option>)}
+            </select>
+            <ChevronDown size={14} className="elite-select-chevron" />
+          </div>
+          <label className="input-label">Serial Numbers</label>
+          <textarea
+            className="invoice-textarea"
+            value={toyBoxSerialInput}
+            onChange={(e) => setToyBoxSerialInput(e.target.value)}
+            placeholder="41,42,43,44,45"
+            rows={4}
+            required
+          />
+          <Input
+            label="Initial Stock Per Serial"
+            type="number"
+            min="0"
+            value={toyBoxInitialStock}
+            onChange={(e) => setToyBoxInitialStock(Math.max(0, parseInt(e.target.value, 10) || 0))}
+            required
+          />
+          <div className="modal-footer-actions">
+            <Button variant="ghost" type="button" onClick={() => setIsToyBoxModalOpen(false)}>Cancel</Button>
+            <Button variant="primary" type="submit" className="save-btn">Add Serials</Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={isInvoiceModalOpen} onClose={() => setIsInvoiceModalOpen(false)} title="AI Invoice → Inventory Stock Sync">
+        <div className="invoice-sync-wrap invoice-modal-shell">
+          <div className="modal-hero-card invoice-hero-card">
+            <div className="modal-hero-icon invoice">
+              <Bot size={20} />
+            </div>
+            <div className="modal-hero-copy">
+              <span className="modal-hero-eyebrow">Smart Stock Workflow</span>
+              <h3 className="modal-hero-title">Paste invoice lines and let the parser organize the update</h3>
+              <p className="modal-hero-text">
+                Manual bulk format supported: <b>toybox1 4 pis,, toybox2 10 pis,,, toybox38 5 pis</b>. Multiple commas, line breaks, and extra spaces are handled.
+              </p>
+            </div>
+          </div>
+
+          <div className="invoice-surface-card">
+            <div className="adjust-mode-toggle">
+              <button className={`mode-btn restock ${invoiceStockMode === 'add' ? 'active' : ''}`} onClick={() => setInvoiceStockMode('add')}>
+                <ArrowUpRight size={18} /> <span>Add Stock</span>
+              </button>
+              <button className={`mode-btn deduct ${invoiceStockMode === 'deduct' ? 'active' : ''}`} onClick={() => setInvoiceStockMode('deduct')}>
+                <ArrowDownRight size={18} /> <span>Deduct Stock</span>
+              </button>
+            </div>
+
+            <label className="invoice-manual-toggle invoice-manual-toggle--surface">
+              <input
+                type="checkbox"
+                checked={useManualBulkMode}
+                onChange={(e) => setUseManualBulkMode(e.target.checked)}
+              />
+              <span>Use Manual Bulk Parser (recommended for toybox style input)</span>
+            </label>
+          </div>
+
+          <div className="invoice-surface-card invoice-editor-card">
+            <div className="inventory-form-section-head compact">
+              <span className="section-kicker">Invoice Input</span>
+              <p>Paste line items naturally. The preview step will summarize matched, unmatched, and quantity changes.</p>
+            </div>
+            <label className="invoice-label">Invoice Text</label>
+            <textarea
+              className="invoice-textarea"
+              value={invoiceText}
+              onChange={(e) => setInvoiceText(e.target.value)}
+              placeholder={'2x Organizer\nToy Box - 3\nGift Bag x 1'}
+              rows={8}
+            />
+          </div>
+
+          <div className="invoice-action-row">
+            <Button variant="ghost" onClick={handlePreviewInvoice} disabled={isPreviewingInvoice || isApplyingInvoice}>
+              {isPreviewingInvoice ? <Loader2 size={16} className="spin" /> : <Search size={16} />} Preview Detection
+            </Button>
+            <Button variant="primary" onClick={handleApplyInvoiceSync} disabled={isPreviewingInvoice || isApplyingInvoice}>
+              <CheckCircle2 size={16} /> Review & Continue
+            </Button>
+          </div>
+
+          <div className="invoice-confirm-wrap invoice-flow-note">
+            <label className="invoice-label">Flow: Preview → Modal Review → Final Confirm</label>
+          </div>
+
+          {invoiceError && (
+            <div className="invoice-error-box">
+              <CircleAlert size={16} />
+              <span>{invoiceError}</span>
+            </div>
+          )}
+
+          {invoicePreview && (
+            <div className="invoice-preview-panel">
+              <div className="invoice-preview-summary">
+                <span>Parsed: <b>{invoicePreview.summary?.lines || 0}</b></span>
+                <span>Matched: <b>{invoicePreview.summary?.matchedLines || 0}</b></span>
+                <span>Unmatched: <b>{invoicePreview.summary?.unmatchedLines || 0}</b></span>
+                <span>Total Qty: <b>{invoicePreview.summary?.totalQty || 0}</b></span>
+              </div>
+
+              <div className="invoice-preview-grid">
+                <div>
+                  <h4>Matched Products</h4>
+                  {invoicePreview.matched?.length ? (
+                    <div className="invoice-match-list">
+                      {invoicePreview.matched.map((m) => (
+                        <div key={m.inventory_id} className="invoice-match-item">
+                          <strong>{m.inventory_name}</strong>
+                          <p>
+                            {invoiceStockMode === 'add' ? 'Add' : 'Deduct'}: {m.quantity} • Stock: {m.current_stock} → {m.next_stock}
+                            {m.shortfall > 0 ? ` • Shortfall: ${m.shortfall}` : ''}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="invoice-empty">No matched products detected.</p>
+                  )}
+                </div>
+
+                <div>
+                  <h4>Unmatched Lines</h4>
+                  {invoicePreview.unmatched?.length ? (
+                    <div className="invoice-unmatched-list">
+                      {invoicePreview.unmatched.map((u, idx) => (
+                        <div key={`${u.sourceLine}-${idx}`} className="invoice-unmatched-item">
+                          <strong>{u.sourceLine}</strong>
+                          {u.reason ? <p>{u.reason}</p> : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="invoice-empty">All parsed lines matched inventory.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      <Modal isOpen={isReviewModalOpen} onClose={() => setIsReviewModalOpen(false)} title="Review Pending Inventory Changes">
+        <div className="invoice-sync-wrap">
+          <p className="invoice-help-text">
+            This is a review-only step. Press final <b>Confirm</b> to apply; cancel/close/ESC/outside click will apply nothing.
+          </p>
+
+          <div className="invoice-preview-summary">
+            <span>Affected Items: <b>{invoicePreview?.matched?.length || 0}</b></span>
+            <span>Skipped Items: <b>{invoicePreview?.unmatched?.length || 0}</b></span>
+            <span>Total Qty Change: <b>{invoicePreview?.summary?.totalQty || 0}</b></span>
+          </div>
+
+          <div className="invoice-preview-grid">
+            <div>
+              <h4>Matched (Will Apply)</h4>
+              {invoicePreview?.matched?.length ? (
+                <div className="invoice-match-list">
+                  {invoicePreview.matched.map((m) => (
+                    <div key={`review-${m.inventory_id}`} className="invoice-match-item">
+                      <strong>{m.inventory_name}</strong>
+                      <p>{invoiceStockMode === 'add' ? 'Add' : 'Deduct'}: {m.quantity} • Stock: {m.current_stock} → {m.next_stock}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="invoice-empty">No matched products. Nothing will be updated.</p>
+              )}
+            </div>
+
+            <div>
+              <h4>Unmatched / Skipped</h4>
+              {invoicePreview?.unmatched?.length ? (
+                <div className="invoice-unmatched-list">
+                  {invoicePreview.unmatched.map((u, idx) => (
+                    <div key={`review-unmatched-${idx}`} className="invoice-unmatched-item">
+                      <strong>{u.sourceLine}</strong>
+                      {u.reason ? <p>{u.reason}</p> : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="invoice-empty">No skipped lines.</p>
+              )}
+            </div>
+          </div>
+
+          {reviewError && (
+            <div className="invoice-error-box">
+              <CircleAlert size={16} />
+              <span>{reviewError}</span>
+            </div>
+          )}
+
+          <div className="modal-footer-actions">
+            <Button variant="ghost" type="button" onClick={() => { setIsReviewModalOpen(false); setReviewError(''); }} disabled={isApplyingInvoice}>Cancel</Button>
+            <Button variant="primary" type="button" onClick={handleFinalConfirmApply} disabled={isApplyingInvoice || !(invoicePreview?.matched?.length > 0)}>
+              {isApplyingInvoice ? <Loader2 size={16} className="spin" /> : <CheckCircle2 size={16} />} Confirm
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {ConfirmDialogComponent}
+    </div>
+  );
+};

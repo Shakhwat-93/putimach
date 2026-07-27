@@ -1,0 +1,52 @@
+# Root .htaccess for Hostinger Shared Hosting (Apache)
+
+# 1. Explicit MIME Types
+<IfModule mod_mime.c>
+  AddType application/javascript .js .mjs
+  AddType text/css .css
+  AddType image/webp .webp
+  AddType image/svg+xml .svg
+  AddType font/woff2 .woff2
+  AddType application/json .json
+</IfModule>
+
+# 2. Prevent index.html Caching (Always fetch latest JS/CSS hashes)
+<IfModule mod_headers.c>
+  <FilesMatch "index\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+  <FilesMatch "\.(js|mjs|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot)$">
+    Header set Cache-Control "max-age=31536000, public"
+  </FilesMatch>
+</IfModule>
+
+# 3. SPA Rewrites & Admin Sub-App Routing
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # NEVER rewrite existing files or directories
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Allow PHP scripts to execute directly
+  RewriteCond %{REQUEST_URI} \.php$ [NC]
+  RewriteRule ^ - [L]
+
+  # Auto-redirect /admin (without trailing slash) to /admin/
+  RewriteCond %{REQUEST_URI} ^/admin$ [NC]
+  RewriteRule ^admin$ /admin/ [R=301,L]
+
+  # Handle /admin/ sub-app SPA routes
+  RewriteCond %{REQUEST_URI} ^/admin/ [NC]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^admin/(.*)$ admin/index.html [L]
+
+  # Fallback Storefront SPA routes (EXCLUDE static file extensions)
+  RewriteCond %{REQUEST_URI} !\.(js|mjs|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot|json|php)$ [NC]
+  RewriteRule ^ /index.html [L]
+</IfModule>
