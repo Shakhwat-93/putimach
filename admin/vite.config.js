@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
   const plugins = [react()];
 
   return {
-    base: './',
+    base: isNativeBuild ? './' : '/admin/',
     build: {
       chunkSizeWarningLimit: 650,
       rollupOptions: {

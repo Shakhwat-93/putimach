@@ -3,6 +3,10 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/admin/assets/:path*",
+      "destination": "/admin/assets/:path*"
+    },
+    {
       "source": "/admin",
       "destination": "/admin/index.html"
     },
