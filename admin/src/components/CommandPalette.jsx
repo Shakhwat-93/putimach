@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import './CommandPalette.css';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, Command, LayoutDashboard, ShoppingBag, 
@@ -6,7 +7,6 @@ import {
   Settings, User, PlusCircle, RefreshCw, X
 } from 'lucide-react';
 import { useOrders } from '../context/OrderContext';
-import './CommandPalette.css';
 
 export const CommandPalette = () => {
   const [isOpen, setIsOpen] = useState(false);

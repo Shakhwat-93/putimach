@@ -384,56 +384,7 @@
   color: var(--accent) !important;
 }
 
-/* RESPONSIVE CARDS */
-@media (max-width: 900px) {
-  .order-row {
-    display: block !important;
-    background: #fff !important;
-    border: 1px solid #f1f5f9 !important;
-    border-radius: 12px !important;
-    margin-bottom: 12px !important;
-    padding: 16px !important;
-    position: relative !important;
-  }
 
-  [data-theme='dark'] .order-row {
-    background: rgba(255, 255, 255, 0.02) !important;
-    border: 1px solid var(--glass-border) !important;
-  }
-
-  .order-row td {
-    display: flex !important;
-    padding: 8px 0 !important;
-    border: none !important;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .order-row td::before {
-    color: var(--text-tertiary);
-    font-size: 13px;
-    font-weight: 500;
-  }
-
-  .order-row .id-cell::before { content: "Order"; }
-  .order-row .date-cell::before { content: "Date"; }
-  .order-row .customer-cell::before { content: "Customer"; }
-  .order-row .amount-cell::before { content: "Total"; }
-  .order-row .product-cell::before { content: "Product"; }
-  .order-row .shipping-cell::before { content: "Delivery"; }
-  .order-row .items-cell::before { content: "Items"; }
-  .order-row .status-cell::before { content: "Fulfilment"; }
-  
-  .order-row .actions-cell {
-    border-top: 1px solid rgba(0,0,0,0.05);
-    margin-top: 12px;
-    padding-top: 12px !important;
-  }
-  .order-row .actions-cell::before { content: "Action"; justify-self: flex-start; }
-  .customer-cell-stack { align-items: flex-end; }
-  .customer-quick-row { justify-content: flex-end; }
-  .customer-phone-text { max-width: 130px; text-align: right; }
-}
 
 /* ── SOURCE BADGE ─────────────────────────────────── */
 .source-badge {

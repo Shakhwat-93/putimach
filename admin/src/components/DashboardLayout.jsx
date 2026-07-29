@@ -7,8 +7,8 @@ import { UnattendedOrdersAlertModal } from './UnattendedOrdersAlertModal';
 import { getSessionStorage } from '../platform/storage';
 import { Download, X } from 'lucide-react';
 import api from '../lib/api';
+import { cn } from '../lib/utils';
 import './DashboardLayout.css';
-
 
 export const DashboardLayout = () => {
   const navigate = useNavigate();
@@ -41,80 +41,66 @@ export const DashboardLayout = () => {
   useLayoutEffect(() => {
     const node = scrollRef.current;
     if (!node) return;
-
     const saved = storage.getItem(scrollKey);
     node.scrollTop = saved ? Number(saved) || 0 : 0;
-
-    const handleScroll = () => {
-      storage.setItem(scrollKey, String(node.scrollTop));
-    };
-
+    const handleScroll = () => { storage.setItem(scrollKey, String(node.scrollTop)); };
     node.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      handleScroll();
-      node.removeEventListener('scroll', handleScroll);
-    };
+    return () => { handleScroll(); node.removeEventListener('scroll', handleScroll); };
   }, [scrollKey, storage]);
 
   useEffect(() => {
     const handleBackButton = (event) => {
-      if (isSidebarOpen) {
-        event.preventDefault();
-        setIsSidebarOpen(false);
-      }
+      if (isSidebarOpen) { event.preventDefault(); setIsSidebarOpen(false); }
     };
-
     window.addEventListener('app:backbutton', handleBackButton);
     return () => window.removeEventListener('app:backbutton', handleBackButton);
   }, [isSidebarOpen]);
 
   return (
-    <div className="app-container">
+    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+      {/* Sidebar */}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      
-      {isSidebarOpen && (
-        <div 
-          className="sidebar-overlay mobile-only" 
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
 
-      <div className="main-content">
-        {/* Single unified header — handles both mobile and desktop */}
-        <Header 
-          onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)} 
-          isSidebarOpen={isSidebarOpen} 
-        />
+      {/* Main area */}
+      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
+        {/* Header */}
+        <Header onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)} isSidebarOpen={isSidebarOpen} />
+
+        {/* OTA Update Banner */}
         {updateAvailable && !dismissedUpdate && updateVersion && (
-          <div className="ota-update-top-banner">
-            <div className="ota-banner-content">
-              <Download size={14} className="ota-bounce-icon" />
-              <span>
-                New update available! <b>v{updateVersion.versionName}</b> (Build {updateVersion.versionCode})
+          <div className="flex items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2.5 dark:border-amber-800/50 dark:bg-amber-950/30">
+            <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300">
+              <Download size={14} className="animate-bounce shrink-0" />
+              <span className="text-xs font-semibold">
+                New update available! <strong>v{updateVersion.versionName}</strong> (Build {updateVersion.versionCode})
               </span>
-              <button 
-                className="ota-banner-action-btn"
-                onClick={() => {
-                  navigate('/settings?section=update');
-                }}
+              <button
+                onClick={() => navigate('/settings?section=update')}
+                className="ml-2 rounded-full bg-amber-600 px-3 py-0.5 text-[10px] font-bold text-white hover:bg-amber-700 transition-colors"
               >
                 Update Now
               </button>
             </div>
-            <button className="ota-banner-close" onClick={() => setDismissedUpdate(true)}>
-              <X size={14} />
+            <button
+              onClick={() => setDismissedUpdate(true)}
+              className="flex h-6 w-6 items-center justify-center rounded-full text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors shrink-0"
+            >
+              <X size={13} />
             </button>
           </div>
         )}
-        <main className="content-scrollable" ref={scrollRef}>
+
+        {/* Scrollable content */}
+        <main
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-20 md:pb-4 [-webkit-overflow-scrolling:touch]"
+        >
           <Outlet />
         </main>
       </div>
 
-      {/* Fixed bottom nav — mobile only, all routes */}
+      {/* Mobile bottom nav */}
       <MobileBottomNav />
-
-      {/* Global premium real-time danger alert modal for uncalled orders > 20 mins */}
       <UnattendedOrdersAlertModal />
     </div>
   );

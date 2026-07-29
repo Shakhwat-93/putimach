@@ -159,8 +159,9 @@ export const TaskDetailsModal = ({ task, taskType, isOpen, onClose, onOpenOrder 
           <span>Task Details</span>
         </div>
       }
-      size="large"
+      size="lg"
     >
+      <div className="px-5 pb-5">
       <div className="task-details-grid">
         <div className="details-main">
           {/* Info Section */}
@@ -499,6 +500,7 @@ export const TaskDetailsModal = ({ task, taskType, isOpen, onClose, onOpenOrder 
             )}
           </div>
         </div>
+      </div>
       </div>
     </Modal>
   );

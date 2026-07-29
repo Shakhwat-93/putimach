@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import './ActiveUsers.css';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import api from '../lib/api';
@@ -20,7 +21,6 @@ import {
   Timer,
   AlertCircle
 } from 'lucide-react';
-import './ActiveUsers.css';
 
 export const ActiveUsers = () => {
   const { onlineUsers, isAdmin } = useAuth();

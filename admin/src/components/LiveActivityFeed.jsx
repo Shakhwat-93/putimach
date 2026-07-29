@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import api from '../lib/api';
 import {
   PlusCircle,
   RefreshCw,
   Trash2,
-  User,
   CheckCircle2,
   XSquare,
   Package,
@@ -13,11 +12,11 @@ import {
   Phone,
   Truck,
   FileText,
-  AlertCircle
+  Activity
 } from 'lucide-react';
-import './LiveActivityFeed.css';
 
 const formatRelativeTime = (date) => {
+  if (!date) return '';
   const now = new Date();
   const diffInSeconds = Math.floor((now - new Date(date)) / 1000);
 
@@ -67,7 +66,6 @@ export const LiveActivityFeed = () => {
 
     loadActivity();
 
-    // Subscribe to real-time changes (INSERT/DELETE/UPDATE)
     const subscription = supabase
       .channel('live-activity')
       .on('postgres_changes', {
@@ -77,7 +75,6 @@ export const LiveActivityFeed = () => {
       }, (payload) => {
         setActivities(prev => {
           const filtered = applyClearedFilter([payload.new, ...prev]);
-          // Deduplicate if needed (sometimes trigger + manual log hit at once)
           const unique = filtered.filter((v, i, a) => 
             a.findIndex(t => (t.id === v.id || (t.order_id === v.order_id && t.timestamp === v.timestamp))) === i
           );
@@ -96,7 +93,6 @@ export const LiveActivityFeed = () => {
         schema: 'public',
         table: 'order_activity_logs'
       }, () => {
-        // Keep feed consistent when bulk operations happen
         loadActivity();
       })
       .subscribe();
@@ -117,95 +113,103 @@ export const LiveActivityFeed = () => {
 
   const getActionIcon = (type) => {
     switch (type) {
-      case 'CREATE': return <PlusCircle size={16} className="text-emerald-500" />;
-      case 'UPDATE': return <RefreshCw size={16} className="text-sky-500" />;
-      case 'STATUS_CHANGE': return <ArrowRightCircle size={16} className="text-amber-500" />;
-      case 'DELETE': return <Trash2 size={16} className="text-rose-500" />;
-      case 'CALL_ATTEMPT': return <Phone size={16} className="text-purple-500" />;
-      case 'TRACKING_UPDATE': return <Truck size={16} className="text-blue-500" />;
-      case 'NOTE_ADDED': return <FileText size={16} className="text-slate-500" />;
-      default: return <Package size={16} className="text-slate-400" />;
+      case 'CREATE': return <PlusCircle size={15} className="text-emerald-500" />;
+      case 'UPDATE': return <RefreshCw size={15} className="text-sky-500" />;
+      case 'STATUS_CHANGE': return <ArrowRightCircle size={15} className="text-amber-500" />;
+      case 'DELETE': return <Trash2 size={15} className="text-rose-500" />;
+      case 'CALL_ATTEMPT': return <Phone size={15} className="text-purple-500" />;
+      case 'TRACKING_UPDATE': return <Truck size={15} className="text-blue-500" />;
+      case 'NOTE_ADDED': return <FileText size={15} className="text-slate-500" />;
+      default: return <Package size={15} className="text-muted-foreground" />;
     }
   };
 
   const getEnhancedIcon = (activity) => {
     const desc = (activity.action_description || '').toLowerCase();
-    if (desc.includes('call attempt')) return <Phone size={16} className="text-purple-500" />;
-    if (desc.includes('tracking id')) return <Truck size={16} className="text-blue-500" />;
-    if (desc.includes('note')) return <FileText size={16} className="text-slate-500" />;
+    if (desc.includes('call attempt')) return <Phone size={15} className="text-purple-500" />;
+    if (desc.includes('tracking id')) return <Truck size={15} className="text-blue-500" />;
+    if (desc.includes('note')) return <FileText size={15} className="text-slate-500" />;
     return getActionIcon(activity.action_type);
   };
 
   const getStatusIndicator = (status) => {
     switch (status) {
-      case 'Completed': return <CheckCircle2 size={14} className="text-emerald-500" />;
-      case 'Cancelled': return <XSquare size={14} className="text-rose-500" />;
+      case 'Completed': return <CheckCircle2 size={13} className="text-emerald-500" />;
+      case 'Cancelled': return <XSquare size={13} className="text-rose-500" />;
       default: return null;
     }
   };
 
   if (loading) {
     return (
-      <div className="activity-feed-loading">
-        <div className="spinner"></div>
+      <div className="flex h-64 items-center justify-center p-6 text-muted-foreground">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div className="live-activity-feed">
-      <div className="feed-header">
-        <h3>Live Activity</h3>
-        <span className="live-badge">Live</span>
+    <div className="flex flex-col h-[560px] bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20 shrink-0">
+        <div className="flex items-center gap-2">
+          <Activity size={16} className="text-primary" />
+          <h3 className="text-sm font-bold text-foreground m-0">Live Activity</h3>
+        </div>
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-500 border border-rose-500/20">
+          <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
+          Live
+        </span>
       </div>
-      <div className="activity-list">
+
+      {/* Activity Scroll Area — Dynamically fills card height without empty whitespace */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 divide-y divide-border/30 scrollbar-thin">
         {activities.map((activity, idx) => (
-          <div key={activity.id || idx} className="activity-item" style={{ animationDelay: `${idx * 50}ms` }}>
-            <div className="activity-marker">
-              <div className="marker-dot"></div>
-              {idx < activities.length - 1 && <div className="marker-line"></div>}
+          <div key={activity.id || idx} className="relative flex items-start gap-3 py-3 first:pt-0 last:pb-0 group">
+            {/* Action Icon */}
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-secondary/80 border border-border/50 text-foreground shadow-2xs mt-0.5">
+              {getEnhancedIcon(activity)}
             </div>
 
-            <div className="activity-content">
-              <div className="activity-main">
-                <div className="action-type">
-                  {getEnhancedIcon(activity)}
-                </div>
-                <div className="activity-details">
-                  <p className="activity-desc">
-                    {activity.action_description ? (
-                      activity.action_description
-                    ) : (
-                      <span className="generic-desc"><strong>{activity.changed_by_user_name || 'System'}</strong> updated order details</span>
-                    )}
-                  </p>
-                  {activity.order_id && (
-                    <span className="activity-ref">Order: {activity.order_id}</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="activity-meta">
-                <span className="activity-time">
+            {/* Main content */}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-foreground leading-snug break-words">
+                {activity.action_description ? (
+                  activity.action_description
+                ) : (
+                  <span><strong className="font-bold">{activity.changed_by_user_name || 'System'}</strong> updated order details</span>
+                )}
+              </p>
+              
+              <div className="flex items-center justify-between gap-2 mt-1 flex-wrap">
+                {activity.order_id && (
+                  <span className="inline-block text-[10px] font-mono font-semibold text-muted-foreground bg-secondary px-1.5 py-0.5 rounded border border-border/40">
+                    Order: {activity.order_id}
+                  </span>
+                )}
+                <span className="text-[10px] text-muted-foreground/70 font-medium ml-auto">
                   {formatRelativeTime(activity.timestamp)}
                 </span>
-                {activity.new_status && (
-                  <div className="status-chip">
-                    {getStatusIndicator(activity.new_status)}
-                    <span>{activity.new_status}</span>
-                  </div>
-                )}
               </div>
+
+              {activity.new_status && (
+                <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-secondary text-[10px] font-bold text-foreground">
+                  {getStatusIndicator(activity.new_status)}
+                  <span>{activity.new_status}</span>
+                </div>
+              )}
             </div>
           </div>
         ))}
+
         {activities.length === 0 && (
-          <div className="empty-feed">
-            <Package size={32} />
-            <p>No recent activity logs.</p>
+          <div className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground text-center">
+            <Package size={28} className="opacity-40" />
+            <p className="text-xs font-medium m-0">No recent activity logs.</p>
           </div>
         )}
       </div>
     </div>
   );
 };
+

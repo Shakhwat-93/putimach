@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import './CallTeamPanel.css';
 import { useOrders } from '../context/OrderContext';
 import { OrderEditModal } from '../components/OrderEditModal';
 import { OrderDetailsModal } from '../components/OrderDetailsModal';
@@ -17,7 +18,9 @@ import CurrencyIcon from '../components/CurrencyIcon';
 import { Modal } from '../components/Modal';
 import { useRouteOrderReadState } from '../hooks/useRouteOrderReadState';
 import { ResponseTimer } from '../components/ResponseTimer';
-import './CallTeamPanel.css';
+import { cn } from '../lib/utils';
+import { Button } from '../components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 
 const STATUS_OPTIONS = ['ACTIVE', 'NEW', 'PENDING', 'FINAL'];
 const ACTIVE_CALL_STATUSES = ['New', 'Pending Call', 'Final Call Pending'];
@@ -41,10 +44,11 @@ const getVisiblePageNumbers = (currentPage, totalPages, maxVisible = 5) => {
 
   return Array.from({ length: end - start + 1 }, (_, index) => start + index);
 };
+
 const QUICK_CALL_STATUSES = [
-  { id: 'busy', label: 'Busy', logLabel: 'Busy', icon: PhoneOff, tone: 'busy' },
-  { id: 'not-pick', label: 'Not Pick', logLabel: 'Not Pick', icon: PhoneMissed, tone: 'not-pick' },
-  { id: 'hold', label: 'Hold', logLabel: 'On Hold', icon: PauseCircle, tone: 'hold' }
+  { id: 'busy', label: 'Busy', logLabel: 'Busy', icon: PhoneOff, tone: 'text-orange-700 bg-orange-100 hover:bg-orange-200' },
+  { id: 'not-pick', label: 'Not Pick', logLabel: 'Not Pick', icon: PhoneMissed, tone: 'text-amber-700 bg-amber-100 hover:bg-amber-200' },
+  { id: 'hold', label: 'Hold', logLabel: 'On Hold', icon: PauseCircle, tone: 'text-blue-700 bg-blue-100 hover:bg-blue-200' }
 ];
 
 const ACTION_NOTE_CONFIG = {
@@ -93,6 +97,40 @@ const getCallQueueStage = (order) => {
   return null;
 };
 
+const getInitials = (name) => {
+  if (!name) return 'U';
+  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+};
+
+const getCallStatusToneClass = (value = '') => {
+  const normalized = String(value).toLowerCase();
+  if (normalized.includes('busy')) return 'bg-orange-100 text-orange-700 border-orange-200';
+  if (normalized.includes('not pick') || normalized.includes('no answer') || normalized.includes('miss')) return 'bg-amber-100 text-amber-700 border-amber-200';
+  if (normalized.includes('hold') || normalized.includes('call back')) return 'bg-blue-100 text-blue-700 border-blue-200';
+  return 'bg-gray-100 text-gray-700 border-gray-200';
+};
+
+const StatusBadge = ({ status }) => {
+  let dotColor = 'bg-gray-500';
+  let textColor = 'text-gray-700';
+  let bgColor = 'bg-gray-50';
+  let borderColor = 'border-gray-200';
+  
+  if (status.includes('Pending')) { dotColor = 'bg-amber-500'; textColor = 'text-amber-700'; bgColor = 'bg-amber-50'; borderColor = 'border-amber-200'; }
+  if (status === 'Confirmed') { dotColor = 'bg-emerald-500'; textColor = 'text-emerald-700'; bgColor = 'bg-emerald-50'; borderColor = 'border-emerald-200'; }
+  if (status === 'Cancelled') { dotColor = 'bg-rose-500'; textColor = 'text-rose-700'; bgColor = 'bg-rose-50'; borderColor = 'border-rose-200'; }
+  if (status === 'Fake Order') { dotColor = 'bg-red-500'; textColor = 'text-red-700'; bgColor = 'bg-red-50'; borderColor = 'border-red-200'; }
+  if (status.includes('Final Call')) { dotColor = 'bg-orange-500'; textColor = 'text-orange-700'; bgColor = 'bg-orange-50'; borderColor = 'border-orange-200'; }
+  if (status === 'In Transit') { dotColor = 'bg-sky-500'; textColor = 'text-sky-700'; bgColor = 'bg-sky-50'; borderColor = 'border-sky-200'; }
+
+  return (
+    <div className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border", bgColor, textColor, borderColor)}>
+      <span className={cn("h-1.5 w-1.5 rounded-full", dotColor)} />
+      {status}
+    </div>
+  );
+};
+
 export const CallTeamPanel = () => {
   const { orders, stats, inventory, updateOrderStatus, fetchOrders } = useOrders();
   const { user, profile, userRoles, updatePresenceContext } = useAuth();
@@ -102,7 +140,6 @@ export const CallTeamPanel = () => {
     updatePresenceContext('Managing Calls');
   }, [updatePresenceContext]);
 
-  // Filters
   const [searchTerm, _setSearchTerm] = usePersistentState('panel:call-team:search', '');
   const [statusFilter, setStatusFilter] = usePersistentState('panel:call-team:status', 'ACTIVE');
   const [productFilter, setProductFilter] = usePersistentState('panel:call-team:product', '');
@@ -121,7 +158,6 @@ export const CallTeamPanel = () => {
   const [isSubmittingAction, setIsSubmittingAction] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   
-  // Globabl Ratio Cache & Auto-fetch
   const { checkPhone, getRatio } = useCourierRatio();
 
   useEffect(() => {
@@ -166,7 +202,6 @@ export const CallTeamPanel = () => {
     }
   };
 
-  // Relative Time Helper
   const getTimeAgo = (date) => {
     if (!date) return null;
     const seconds = Math.floor((new Date() - new Date(date)) / 1000);
@@ -178,7 +213,6 @@ export const CallTeamPanel = () => {
     return new Date(date).toLocaleDateString();
   };
 
-  // Filter Logic
   const matchesBaseFilters = (o) => {
     const term = searchTerm.toLowerCase();
     const matchesSearch = !searchTerm ||
@@ -200,33 +234,26 @@ export const CallTeamPanel = () => {
 
   const tabCounts = useMemo(() => {
     const counts = { ACTIVE: 0, NEW: 0, PENDING: 0, FINAL: 0 };
-
     orders.forEach((order) => {
       if (!matchesBaseFilters(order)) return;
       const stage = getCallQueueStage(order);
       if (!stage) return;
-
       counts.ACTIVE += 1;
       counts[stage] += 1;
     });
-
     return counts;
   }, [orders, searchTerm, productFilter, dateRange]);
 
   const filteredOrders = useMemo(() => {
     return orders.filter(o => {
       if (!matchesBaseFilters(o)) return false;
-
       const stage = getCallQueueStage(o);
       if (!stage) return false;
-
-      if (statusFilter === 'ACTIVE') {
-        return true;
-      }
-
+      if (statusFilter === 'ACTIVE') return true;
       return stage === statusFilter;
     });
   }, [orders, searchTerm, statusFilter, productFilter, dateRange]);
+  
   const { isOrderUnread, markOrderRead, unreadCount } = useRouteOrderReadState('call-team-panel', filteredOrders);
 
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / CALL_TASKS_PER_PAGE));
@@ -237,12 +264,9 @@ export const CallTeamPanel = () => {
   const visiblePages = useMemo(() => getVisiblePageNumbers(currentPage, totalPages), [currentPage, totalPages]);
 
   useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
+    if (currentPage > totalPages) setCurrentPage(totalPages);
   }, [currentPage, totalPages]);
 
-  // Auto-queue visible phones for Courier Ratio checking
   useEffect(() => {
     const unchecked = [...new Set(
       paginatedOrders
@@ -255,17 +279,13 @@ export const CallTeamPanel = () => {
     unchecked.forEach(p => checkPhone(p));
   }, [paginatedOrders, checkPhone, getRatio]);
 
-  // Metrics Calculations
   const pendingCount = orders.filter(o => ACTIVE_CALL_STATUSES.includes(o.status)).length;
-
-  // Today's local midnight (BD time)
   const todayStart = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
 
   const confirmedToday = typeof stats?.confirmedTodayCount === 'number'
     ? stats.confirmedTodayCount
     : orders.filter(o => o.status === 'Confirmed' && new Date(o.updated_at || o.created_at) >= todayStart).length;
 
-  // Real Confirmation Rate — all called orders today vs confirmed ones
   const realConfirmRate = useMemo(() => {
     const calledToday = orders.filter(o => {
       const updatedAt = new Date(o.updated_at || o.created_at);
@@ -277,7 +297,6 @@ export const CallTeamPanel = () => {
     return { rate: +((confirmed / calledToday.length) * 100).toFixed(1), total: calledToday.length, confirmed };
   }, [orders]);
 
-  // Real Average Response Time — avg(first_call_time - created_at) for today's responses
   const realAvgResponseMin = useMemo(() => {
     const respondedToday = orders.filter(o => o.first_call_time && new Date(o.first_call_time) >= todayStart);
     if (respondedToday.length === 0) return null;
@@ -287,7 +306,6 @@ export const CallTeamPanel = () => {
     return +(totalMins / respondedToday.length).toFixed(1);
   }, [orders]);
 
-  // Derived display values for avg response card
   const avgRespLabel = realAvgResponseMin === null ? '—'
     : realAvgResponseMin >= 60 ? `${(realAvgResponseMin / 60).toFixed(1)}h`
     : `${realAvgResponseMin}m`;
@@ -371,169 +389,156 @@ export const CallTeamPanel = () => {
     }
   };
 
-  // Avatar Generator
-  const getInitials = (name) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-  };
-
-  const getCallStatusTone = (value = '') => {
-    const normalized = String(value).toLowerCase();
-    if (normalized.includes('busy')) return 'busy';
-    if (normalized.includes('not pick') || normalized.includes('no answer') || normalized.includes('miss')) return 'not-pick';
-    if (normalized.includes('hold') || normalized.includes('call back')) return 'hold';
-    return 'default';
-  };
-
   return (
-    <div className="call-team-panel">
-      
-      {/* â”€â”€ 1. Top Header Row â”€â”€ */}
-      <div className="elite-header-wrapper">
-        <div className="elite-header-titles">
-          <h1>Call Operations</h1>
-          <p>Real-time status of your high-performance call center fleet.</p>
+    <div className="p-3 sm:p-4 md:p-8 max-w-7xl mx-auto space-y-6 animate-slide-up w-full max-w-full overflow-x-hidden">
+      {/* 1. Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">Call Operations</h1>
+          <p className="text-muted-foreground text-sm">Real-time status of your high-performance call center fleet.</p>
         </div>
-        
-        <div className="elite-header-badges">
-          <div className="elite-top-badge queue">
-            <div className="badge-icon-ctn">3</div>
-            <div className="badge-text-ctn">
-              <span className="badge-sub">IN QUEUE</span>
-              <span className="badge-val">{pendingCount} <span>UNITS</span></span>
+        <div className="flex gap-3">
+          <div className="flex items-center gap-3 bg-card border border-border px-4 py-2 rounded-xl shadow-sm">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-bold">
+              3
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-muted-foreground tracking-wider">IN QUEUE</span>
+              <span className="text-sm font-bold text-foreground">{pendingCount} <span className="text-xs text-muted-foreground font-normal">UNITS</span></span>
             </div>
           </div>
-          
-          <div className="elite-top-badge confirmed">
-            <div className="badge-icon-ctn"><CheckCircle size={18} strokeWidth={3} /></div>
-            <div className="badge-text-ctn">
-              <span className="badge-sub">CONFIRMED TODAY</span>
-              <span className="badge-val">{confirmedToday} <span>ORDERS</span></span>
+          <div className="flex items-center gap-3 bg-card border border-border px-4 py-2 rounded-xl shadow-sm">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-600">
+              <CheckCircle size={18} strokeWidth={3} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-muted-foreground tracking-wider">CONFIRMED TODAY</span>
+              <span className="text-sm font-bold text-foreground">{confirmedToday} <span className="text-xs text-muted-foreground font-normal">ORDERS</span></span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* â”€â”€ 2. Metric Cards Row â”€â”€ */}
-      <div className="elite-metrics-grid">
-        
-        {/* ── Real-time Confirmation Rate Card ── */}
-        <div className="elite-metric-card">
-          <div className="metric-header">
-            <span className="metric-sup-title">REAL-TIME PERFORMANCE</span>
-            {realConfirmRate && (
-              <div
-                className="metric-target-badge"
-                style={{
-                  background: realConfirmRate.rate >= 60 ? 'rgba(16,185,129,0.12)'
-                    : realConfirmRate.rate >= 40 ? 'rgba(245,158,11,0.12)'
-                    : 'rgba(239,68,68,0.12)',
-                  color: realConfirmRate.rate >= 60 ? '#10b981'
-                    : realConfirmRate.rate >= 40 ? '#f59e0b' : '#ef4444',
-                }}
-              >
-                <TrendingUp size={12} strokeWidth={3} />
-                {realConfirmRate.confirmed}/{realConfirmRate.total} called today
+      {/* 2. Metrics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="animate-slide-up">
+          <CardHeader className="pb-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold tracking-wider text-muted-foreground">REAL-TIME PERFORMANCE</span>
+              {realConfirmRate && (
+                <div className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold",
+                  realConfirmRate.rate >= 60 ? "bg-emerald-50 text-emerald-600" :
+                  realConfirmRate.rate >= 40 ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-600"
+                )}>
+                  <TrendingUp size={12} strokeWidth={3} />
+                  {realConfirmRate.confirmed}/{realConfirmRate.total} called today
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+              {realConfirmRate === null ? '—' : realConfirmRate.rate}
+              <span className="text-sm font-normal text-muted-foreground ml-2">% Confirmation Rate</span>
+            </div>
+            <div className="flex items-end gap-1 h-12 pt-2 border-t border-border">
+              {orders
+                .filter(o => Number(o.call_attempts || 0) > 0 || o.first_call_time)
+                .slice(-10)
+                .map((o, i, arr) => {
+                  const isConfirmed = o.status === 'Confirmed';
+                  const isCancelled = o.status === 'Cancelled' || o.status === 'Fake Order';
+                  const barH = Math.min(100, 25 + (Number(o.call_attempts || 1)) * 18);
+                  return (
+                    <div
+                      key={o.id}
+                      className="flex-1 rounded-t-sm transition-all duration-300"
+                      style={{
+                        height: `${barH}%`,
+                        background: isConfirmed ? '#10b981' : isCancelled ? '#ef4444' : 'var(--text-muted-foreground)',
+                        opacity: isConfirmed || isCancelled ? 1 : 0.25,
+                      }}
+                      title={`${o.customer_name} — ${o.status} (${o.call_attempts || 0} calls)`}
+                    />
+                  );
+                })}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="animate-slide-up" style={{ animationDelay: '100ms' }}>
+          <CardHeader className="pb-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold tracking-wider text-muted-foreground">AVERAGE RESPONSE TIME</span>
+              <div className={cn(
+                "px-2.5 py-1 rounded-full text-[10px] font-bold",
+                avgRespStatus === 'good' ? "bg-emerald-50 text-emerald-600" :
+                avgRespStatus === 'warning' ? "bg-amber-50 text-amber-600" :
+                avgRespStatus === 'critical' ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"
+              )}>
+                {avgRespStatus === 'good' ? 'On Target' :
+                 avgRespStatus === 'warning' ? 'Near Limit' :
+                 avgRespStatus === 'critical' ? 'Overdue' : 'No Data'}
               </div>
-            )}
-          </div>
-          <div className="metric-big-val">
-            {realConfirmRate === null ? '—' : realConfirmRate.rate}
-            <span>% Confirmation Rate</span>
-          </div>
-
-          {/* Live bar chart — last 10 called orders */}
-          <div className="metric-chart-container">
-            {orders
-              .filter(o => Number(o.call_attempts || 0) > 0 || o.first_call_time)
-              .slice(-10)
-              .map((o, i, arr) => {
-                const isConfirmed = o.status === 'Confirmed';
-                const isCancelled = o.status === 'Cancelled' || o.status === 'Fake Order';
-                const barH = Math.min(100, 25 + (Number(o.call_attempts || 1)) * 18);
-                return (
-                  <div
-                    key={o.id}
-                    className={`metric-bar ${i === arr.length - 1 ? 'active' : ''}`}
-                    style={{
-                      height: `${barH}%`,
-                      background: isConfirmed ? '#10b981' : isCancelled ? '#ef4444' : undefined,
-                      opacity: isConfirmed || isCancelled ? 1 : 0.45,
-                    }}
-                    title={`${o.customer_name} — ${o.status} (${o.call_attempts || 0} calls)`}
-                  />
-                );
-              })}
-          </div>
-        </div>
-
-        {/* ── Real Average Response Time Card ── */}
-        <div className="elite-metric-card">
-          <div className="metric-header">
-            <span className="metric-sup-title">AVERAGE RESPONSE TIME</span>
-            <div
-              className="metric-target-badge"
-              style={{
-                background: avgRespStatus === 'good' ? 'rgba(16,185,129,0.12)'
-                  : avgRespStatus === 'warning' ? 'rgba(245,158,11,0.12)'
-                  : avgRespStatus === 'critical' ? 'rgba(239,68,68,0.12)'
-                  : 'rgba(100,116,139,0.1)',
-                color: avgRespStatus === 'good' ? '#10b981'
-                  : avgRespStatus === 'warning' ? '#f59e0b'
-                  : avgRespStatus === 'critical' ? '#ef4444'
-                  : '#64748b',
-              }}
-            >
-              {avgRespStatus === 'good' ? 'On Target'
-                : avgRespStatus === 'warning' ? 'Near Limit'
-                : avgRespStatus === 'critical' ? 'Overdue'
-                : 'No Data'}
             </div>
-          </div>
-          <div className="metric-big-val" style={{ fontSize: '48px', marginBottom: '8px' }}>
-            {avgRespLabel}
-            {realAvgResponseMin !== null && (
-              <span style={{ fontSize: '14px', marginLeft: '6px', opacity: 0.5 }}>avg today</span>
-            )}
-          </div>
-          <p className="metric-text-desc">{avgRespDesc}</p>
-          <div className="metric-progress-line">
-            <div
-              className="metric-progress-fill"
-              style={{
-                width: `${avgRespProgress}%`,
-                background: avgRespStatus === 'good' ? '#10b981'
-                  : avgRespStatus === 'warning' ? '#f59e0b'
-                  : avgRespStatus === 'critical' ? '#ef4444'
-                  : '#94a3b8',
-                transition: 'width 0.8s ease',
-              }}
-            />
-          </div>
-        </div>
-
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl md:text-5xl font-bold text-foreground mb-2">
+              {avgRespLabel}
+              {realAvgResponseMin !== null && (
+                <span className="text-sm font-normal text-muted-foreground ml-2 opacity-70">avg today</span>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">{avgRespDesc}</p>
+            <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-1000"
+                style={{
+                  width: `${avgRespProgress}%`,
+                  background: avgRespStatus === 'good' ? '#10b981' :
+                              avgRespStatus === 'warning' ? '#f59e0b' :
+                              avgRespStatus === 'critical' ? '#ef4444' : '#94a3b8',
+                }}
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* â”€â”€ 3. Pill Filter Row â”€â”€ */}
-      <div className="elite-filter-row">
-        <div className="elite-pill-tabs">
+      {/* 3. Filters */}
+      <div className="flex flex-col md:flex-row gap-4 mb-6 items-start md:items-center justify-between">
+        <div className="flex overflow-x-auto space-x-2 pb-2 md:pb-0 w-full md:w-auto scrollbar-hide">
           {STATUS_OPTIONS.map(tab => (
             <button 
               key={tab} 
-              className={`elite-pill-tab ${statusFilter === tab ? 'active' : ''}`}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors",
+                statusFilter === tab 
+                  ? "bg-foreground text-background" 
+                  : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+              )}
               onClick={() => setStatusFilter(tab)}
-              title={`${CALL_STAGE_LABELS[tab]} call tasks`}
             >
               <span>{tab}</span>
-              <span className="elite-pill-count">{tabCounts[tab] || 0}</span>
+              <span className={cn(
+                "px-2 py-0.5 rounded-full text-xs",
+                statusFilter === tab ? "bg-background/20 text-background" : "bg-background text-foreground"
+              )}>
+                {tabCounts[tab] || 0}
+              </span>
             </button>
           ))}
         </div>
         
-        <div className="elite-filter-right">
-          <div className="elite-category-dropdown">
-            CATEGORY: 
-            <select value={productFilter} onChange={(e) => setProductFilter(e.target.value)}>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-1.5 shadow-sm text-sm font-medium">
+            <span className="text-xs text-muted-foreground tracking-wider">CATEGORY:</span>
+            <select 
+              className="bg-transparent border-none text-foreground outline-none cursor-pointer pr-2"
+              value={productFilter} 
+              onChange={(e) => setProductFilter(e.target.value)}
+            >
               <option value="">ALL PRODUCTS</option>
               {productOptions.map((product) => (
                 <option key={product} value={product}>{product.toUpperCase()}</option>
@@ -541,315 +546,346 @@ export const CallTeamPanel = () => {
             </select>
           </div>
           {unreadCount > 0 && (
-            <span className="route-unread-count-pill" title="Orders not opened in Call Team route">
+            <span className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm whitespace-nowrap">
               {unreadCount} unread
             </span>
           )}
-          <button className="elite-icon-btn">
-            <Settings2 size={16} />
-          </button>
+          <Button variant="outline" size="icon" className="rounded-xl border-border shrink-0">
+            <Settings2 size={16} className="text-muted-foreground" />
+          </Button>
         </div>
       </div>
 
-      {/* â”€â”€ 4. Premium Card List â”€â”€ */}
-      <div className="elite-list-container">
-        <div className="elite-list-headers">
-          <div>ORDER #</div>
-          <div>CUSTOMER</div>
-          <div>PRODUCT DETAILS</div>
-          <div>AMOUNT</div>
-          <div className="status-col">STATUS</div>
-          <div className="sla-col">SLA TIMER</div>
-          <div style={{ textAlign: 'right' }}>ACTIONS</div>
-        </div>
+      {/* 4. Main List */}
+      <div className="hidden md:block rounded-2xl border border-border bg-card overflow-hidden shadow-sm overflow-x-auto">
+        <table className="w-full text-sm text-left">
+          <thead className="text-xs text-muted-foreground bg-secondary/50 uppercase">
+            <tr>
+              <th className="px-4 py-3 font-semibold">Order #</th>
+              <th className="px-4 py-3 font-semibold">Customer</th>
+              <th className="px-4 py-3 font-semibold">Product Details</th>
+              <th className="px-4 py-3 font-semibold">Amount</th>
+              <th className="px-4 py-3 font-semibold">Status</th>
+              <th className="px-4 py-3 font-semibold">SLA Timer</th>
+              <th className="px-4 py-3 font-semibold text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {paginatedOrders.map(order => {
+              const rt = getRatio(order.phone) || {};
+              const successRatio = rt.ratio !== undefined ? rt.ratio : (order.phone ? '...' : '0');
+              const showTrust = rt.fetched && rt.total > 0;
+              const isActionable = order.status === 'New' || order.status === 'Pending Call' || order.status === 'Final Call Pending';
+              const latestNotePreview = getLatestNotePreview(order.notes);
+              const orderCreatedLabel = order.created_at
+                ? new Date(order.created_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true })
+                : 'N/A';
 
-        <div className="elite-order-list">
-          {paginatedOrders.map(order => {
-            
-            // Generate Mock Elite status for Timer based on created_at
-            let slaClass = 'elapsed'; let slaIcon = <Clock size={12} />; let slaText = 'Just now';
-            const minsAge = Math.floor((Date.now() - new Date(order.created_at).getTime()) / 60000);
-            if (minsAge < 15) { slaClass = 'remaining'; slaIcon = <Clock size={12}/>; slaText = `${15 - minsAge}m REMAINING`; }
-            else if (minsAge < 60) { slaClass = 'elapsed'; slaIcon = <CheckCircle size={12}/>; slaText = `${minsAge}m ELAPSED`; }
-            else { slaClass = 'overdue'; slaIcon = <ShieldAlert size={12}/>; slaText = `! OVERDUE`; }
-
-            // Trust Ratio extraction
-            const rt = getRatio(order.phone) || {};
-            const successRatio = rt.ratio !== undefined ? rt.ratio : (order.phone ? '...' : '0');
-            const showTrust = rt.fetched && rt.total > 0;
-            const trustClass = successRatio > 70 ? 'high' : successRatio > 40 ? 'neutral' : 'low';
-            const isActionable = order.status === 'New' || order.status === 'Pending Call' || order.status === 'Final Call Pending';
-            const latestNotePreview = getLatestNotePreview(order.notes);
-            const orderCreatedLabel = order.created_at
-              ? new Date(order.created_at).toLocaleString('en-GB', {
-                  day: '2-digit',
-                  month: 'short',
-                  hour: 'numeric',
-                  minute: '2-digit',
-                  hour12: true
-                })
-              : 'N/A';
-
-            // Status Badge Formatting
-            let statusPill = 'neutral';
-            if (order.status === 'New') statusPill = 'pending';
-            if (order.status === 'Pending Call') statusPill = 'active';
-            if (order.status === 'Final Call Pending') statusPill = 'final';
-            if (order.status === 'Confirmed') statusPill = 'confirmed';
-            if (order.status === 'Fake Order') statusPill = 'fake';
-            if (order.status === 'Cancelled') statusPill = 'urgent';
-
-            return (
-              <div key={order.id} className={`elite-list-card ${isOrderUnread(order) ? 'route-unread-card' : ''}`} onClick={() => handleRowClick(order)}>
-                
-                <div className="elite-col-order">
-                  <div className="route-read-card-header">
-                    {isOrderUnread(order) && <span className="route-unread-dot" aria-label="Unread order" />}
-                    <span className="elite-order-code">#{order.id.replace('ORD-', '')}</span>
-                    {isOrderUnread(order) && <span className="route-unread-chip">New</span>}
-                  </div>
-                  <span className="elite-order-time">{orderCreatedLabel}</span>
-                </div>
-
-                <div className="elite-col-customer">
-                  <div className="elite-avatar">{getInitials(order.customer_name)}</div>
-                  <div className="elite-cust-info">
-                    <span className="elite-cust-name">{order.customer_name}</span>
-                    <span className="elite-cust-phone">{order.phone || 'No phone'}</span>
-                    <div className="elite-cust-meta-row">
-                      <span className={`elite-trust-badge ${trustClass}`}>
-                        <Zap size={10} strokeWidth={3} /> {showTrust ? `${successRatio}% SUCCESS` : 'NEW LEAD'}
-                      </span>
-                      {order.last_call_at && (
-                        <span className="elite-last-call-tag">
-                          <PhoneCall size={10} /> {getTimeAgo(order.last_call_at)}
-                        </span>
-                      )}
-                    </div>
-                    {latestNotePreview && (
-                      <div className="elite-note-preview" title={latestNotePreview}>
-                        {latestNotePreview}
+              return (
+                <tr key={order.id} 
+                    className={cn(
+                      "hover:bg-secondary/20 transition-colors cursor-pointer group",
+                      isOrderUnread(order) ? "bg-blue-50/10" : ""
+                    )}
+                    onClick={() => handleRowClick(order)}>
+                  
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        {isOrderUnread(order) && <span className="w-2 h-2 rounded-full bg-blue-500" />}
+                        <span className="font-mono font-medium text-foreground">#{order.id.replace('ORD-', '')}</span>
                       </div>
-                    )}
-                  </div>
-                </div>
+                      <span className="text-xs text-muted-foreground">{orderCreatedLabel}</span>
+                    </div>
+                  </td>
 
-                <div className="elite-col-product">
-                  <span className="elite-prod-name">{order.product_name || 'Unknown Product'}</span>
-                  <span className="elite-prod-meta">
-                    {order.size ? `Size: ${order.size}` : `Qty: ${order.quantity || 1}`} • {order.source || 'Direct'}
-                  </span>
-                </div>
-
-                <div className="elite-col-amount">
-                  <span className="elite-amount-value">
-                    <CurrencyIcon size={13} className="currency-icon-elite" />
-                    {Number(order.amount || 0).toLocaleString()}
-                  </span>
-                  <span className="elite-amount-meta">{order.shipping_zone || 'Delivery pending'}</span>
-                </div>
-
-                <div className="elite-col-status status-col">
-                  <div className="elite-status-stack">
-                    <span className={`elite-status-pill ${statusPill}`}>{order.status}</span>
-                    {order.last_call_status && ['Confirmed', 'Cancelled'].includes(order.status) === false && (
-                      <span className={`elite-call-pill ${getCallStatusTone(order.last_call_status)}`}>
-                        {order.last_call_status}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="elite-col-sla sla-col">
-                  <ResponseTimer order={order} mode="full" />
-                </div>
-
-                <div className="elite-col-actions">
-                  {isActionable && (
-                    <div className="elite-action-dock">
-                      <button className="elite-btn-primary" onClick={(e) => openActionNoteModal(e, order, 'confirm')}>
-                        <CheckCircle size={14} /> Confirm Order
-                      </button>
-                      <div className="elite-action-grid">
-                        {QUICK_CALL_STATUSES.map((item) => {
-                          const Icon = item.icon;
-                          const isLoading = loggingAttemptId === order.id;
-                          return (
-                            <button
-                              key={item.id}
-                              className={`elite-quick-chip ${item.tone} ${isLoading ? 'loading' : ''}`}
-                              title={item.label}
-                              onClick={(e) => openActionNoteModal(e, order, item.id)}
-                              disabled={isLoading}
-                              style={{ opacity: isLoading ? 0.7 : 1, cursor: isLoading ? 'wait' : 'pointer' }}
-                            >
-                              {isLoading ? <Loader2 size={12} className="lucide-spin" /> : <Icon size={12} />}
-                              <span>{isLoading ? 'Wait...' : item.label}</span>
-                            </button>
-                          );
-                        })}
-                        <button
-                          className="elite-quick-chip fake"
-                          title="Mark Fake Order"
-                          onClick={(e) => openActionNoteModal(e, order, 'fake')}
-                        >
-                          <ShieldAlert size={12} />
-                          <span>Fake</span>
-                        </button>
-                        <button
-                          className="elite-quick-chip cancel"
-                          title="Cancel Order"
-                          onClick={(e) => openActionNoteModal(e, order, 'cancel')}
-                        >
-                          <XCircle size={12} />
-                          <span>Cancel</span>
-                        </button>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-secondary text-muted-foreground font-bold shrink-0">
+                        {getInitials(order.customer_name)}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-foreground">{order.customer_name}</span>
+                        <span className="text-xs text-muted-foreground">{order.phone || 'No phone'}</span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={cn(
+                            "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold",
+                            successRatio > 70 ? "bg-emerald-100 text-emerald-700" :
+                            successRatio > 40 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"
+                          )}>
+                            <Zap size={10} /> {showTrust ? `${successRatio}% SUCCESS` : 'NEW LEAD'}
+                          </span>
+                          {order.last_call_at && (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                              <PhoneCall size={10} /> {getTimeAgo(order.last_call_at)}
+                            </span>
+                          )}
+                        </div>
+                        {latestNotePreview && (
+                          <div className="text-xs text-muted-foreground mt-1 truncate max-w-[200px]" title={latestNotePreview}>
+                            {latestNotePreview}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
+                  </td>
 
-                  {order.status === 'Confirmed' && (
-                     <button className="elite-icon-btn edit-order-btn" onClick={(e) => { e.stopPropagation(); handleOpenEditModal(order); }}>
-                       <Edit2 size={14} />
-                     </button>
-                  )}
-                </div>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-foreground truncate max-w-[150px]">{order.product_name || 'Unknown Product'}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {order.size ? `Size: ${order.size}` : `Qty: ${order.quantity || 1}`} • {order.source || 'Direct'}
+                      </span>
+                    </div>
+                  </td>
 
-                {/* â•â• MOBILE CARD LAYOUT (hidden on desktop via CSS) â•â• */}
-                <div className="mob-card-top">
-                  <div className="elite-avatar">{getInitials(order.customer_name)}</div>
-                  <div className="mob-card-head">
-                    <div className="mob-card-title-row">
-                      <span className="elite-cust-name mob-cust-name">{order.customer_name}</span>
-                      <span className="mob-card-amount">
-                        <CurrencyIcon size={13} className="currency-icon-elite" />
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-foreground flex items-center gap-1">
+                        <CurrencyIcon size={13} className="text-muted-foreground" />
                         {Number(order.amount || 0).toLocaleString()}
                       </span>
+                      <span className="text-xs text-muted-foreground">{order.shipping_zone || 'Delivery pending'}</span>
                     </div>
-                    <div className="mob-card-status-row">
-                      <span className={`elite-status-pill ${statusPill} compact`}>{order.status}</span>
+                  </td>
+
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-1.5 items-start">
+                      <StatusBadge status={order.status} />
                       {order.last_call_status && !['Confirmed', 'Cancelled'].includes(order.status) && (
-                        <span className={`elite-call-pill ${getCallStatusTone(order.last_call_status)}`}>
+                        <span className={cn(
+                          "px-2 py-0.5 rounded text-[10px] font-bold border",
+                          getCallStatusToneClass(order.last_call_status)
+                        )}>
                           {order.last_call_status}
                         </span>
                       )}
-                      <span className={`elite-trust-badge ${trustClass} mob-trust-badge`}>
-                        <Zap size={9} strokeWidth={3} /> {showTrust ? `${successRatio}%` : 'NEW'}
-                      </span>
                     </div>
-                  </div>
-                </div>
+                  </td>
 
-                <div className="mob-card-body">
-                  <div className="mob-card-product">
-                    {order.product_name || 'Unknown Product'}
-                    <span className="mob-card-product-meta">
-                      • {order.size ? `Size: ${order.size}` : `Qty: ${order.quantity || 1}`} • {order.source || 'Direct'}
-                    </span>
-                  </div>
-                  <div className="mob-card-meta">
-                    <span className="mob-order-meta">
-                      #{order.id.replace('ORD-', '')} • {orderCreatedLabel}
-                      {isOrderUnread(order) ? ' • Unread' : ''}
-                    </span>
-                    <ResponseTimer order={order} mode="compact" />
-                    {order.last_call_at && (
-                      <span className="elite-last-call-tag">
-                        <PhoneCall size={9} /> {getTimeAgo(order.last_call_at)}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                  <td className="px-4 py-3 font-mono text-sm font-bold text-primary">
+                    <ResponseTimer order={order} mode="full" />
+                  </td>
 
-                {isActionable && (
-                  <div className="mob-card-actions" onClick={(e) => e.stopPropagation()}>
-                    <div className="elite-action-dock">
-                      <button className="elite-btn-primary" onClick={(e) => openActionNoteModal(e, order, 'confirm')}>
-                        <CheckCircle size={15} /> Confirm Order
-                      </button>
-                      <div className="elite-action-grid">
-                        {QUICK_CALL_STATUSES.map((item) => {
-                          const Icon = item.icon;
-                          const isLoading = loggingAttemptId === order.id;
-                          return (
-                            <button
-                              key={item.id}
-                              className={`elite-quick-chip ${item.tone}`}
-                              onClick={(e) => openActionNoteModal(e, order, item.id)}
-                              disabled={isLoading}
-                              style={{ opacity: isLoading ? 0.7 : 1 }}
-                            >
-                              {isLoading ? <Loader2 size={13} className="lucide-spin" /> : <Icon size={13} />}
-                              <span>{isLoading ? '...' : item.label}</span>
-                            </button>
-                          );
-                        })}
-                        <button className="elite-quick-chip cancel" onClick={(e) => openActionNoteModal(e, order, 'cancel')}>
-                          <XCircle size={13} /><span>Cancel</span>
-                        </button>
-                        <button className="elite-quick-chip fake" onClick={(e) => openActionNoteModal(e, order, 'fake')}>
-                          <ShieldAlert size={13} /><span>Fake</span>
-                        </button>
+                  <td className="px-4 py-3 text-right">
+                    {isActionable && (
+                      <div className="flex flex-col gap-2 items-end">
+                        <Button 
+                          size="sm" 
+                          className="rounded-xl px-3 py-2 text-xs font-bold transition-colors bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm w-32 flex justify-center gap-1.5"
+                          onClick={(e) => openActionNoteModal(e, order, 'confirm')}
+                        >
+                          <CheckCircle size={14} /> Confirm
+                        </Button>
+                        <div className="grid grid-cols-2 gap-1.5 w-32">
+                          {QUICK_CALL_STATUSES.map((item) => {
+                            const Icon = item.icon;
+                            const isLoading = loggingAttemptId === order.id;
+                            return (
+                              <button
+                                key={item.id}
+                                className={cn(
+                                  "flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold transition-colors border shadow-sm",
+                                  item.tone,
+                                  isLoading ? "opacity-70 cursor-wait" : ""
+                                )}
+                                onClick={(e) => openActionNoteModal(e, order, item.id)}
+                                disabled={isLoading}
+                              >
+                                {isLoading ? <Loader2 size={10} className="animate-spin" /> : <Icon size={10} />}
+                                <span>{item.label}</span>
+                              </button>
+                            );
+                          })}
+                          <button
+                            className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold text-red-700 bg-red-100 border-red-200 hover:bg-red-200 shadow-sm"
+                            onClick={(e) => openActionNoteModal(e, order, 'cancel')}
+                          >
+                            <XCircle size={10} /> Cancel
+                          </button>
+                          <button
+                            className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold text-rose-700 bg-rose-100 border-rose-200 hover:bg-rose-200 shadow-sm col-span-2"
+                            onClick={(e) => openActionNoteModal(e, order, 'fake')}
+                          >
+                            <ShieldAlert size={10} /> Fake Order
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )}
-
-                {order.status === 'Confirmed' && (
-                  <div className="mob-card-actions" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      className="elite-btn-primary"
-                      style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', boxShadow: 'none', border: '1px solid var(--glass-border)' }}
-                      onClick={(e) => { e.stopPropagation(); handleOpenEditModal(order); }}
-                    >
-                      <Edit2 size={14} /> Edit Order
-                    </button>
-                  </div>
-                )}
-
-              </div>
-            );
-          })}
-
-          {filteredOrders.length === 0 && (
-            <div className="elite-empty-card">
-              No orders found matching the filter criteria.
-            </div>
-          )}
-        </div>
+                    )}
+                    {order.status === 'Confirmed' && (
+                      <Button variant="outline" size="sm" className="rounded-xl shadow-sm text-xs font-bold" onClick={(e) => { e.stopPropagation(); handleOpenEditModal(order); }}>
+                        <Edit2 size={14} className="mr-1.5" /> Edit
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            {filteredOrders.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground bg-secondary/20">
+                  No orders found matching the filter criteria.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
-      {/* â”€â”€ 5. Footer Pagination â”€â”€ */}
-      {filteredOrders.length > 0 && (
-        <div className="elite-pagination-footer">
-          <div className="elite-pagination-stats">
-            Showing {(currentPage - 1) * CALL_TASKS_PER_PAGE + 1}-
-            {Math.min(currentPage * CALL_TASKS_PER_PAGE, filteredOrders.length)} of {filteredOrders.length} active call tasks
+      {/* Mobile view */}
+      <div className="md:hidden space-y-3">
+        {paginatedOrders.map(order => {
+          const rt = getRatio(order.phone) || {};
+          const successRatio = rt.ratio !== undefined ? rt.ratio : (order.phone ? '...' : '0');
+          const showTrust = rt.fetched && rt.total > 0;
+          const isActionable = order.status === 'New' || order.status === 'Pending Call' || order.status === 'Final Call Pending';
+          
+          return (
+            <div key={order.id} className="rounded-2xl border border-border bg-card p-4 space-y-3 shadow-sm" onClick={() => handleRowClick(order)}>
+              <div className="flex justify-between items-start gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-secondary text-muted-foreground font-bold shrink-0">
+                    {getInitials(order.customer_name)}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-foreground">{order.customer_name}</div>
+                    <div className="text-sm font-bold flex items-center gap-1 text-foreground">
+                      <CurrencyIcon size={12} className="text-muted-foreground" />
+                      {Number(order.amount || 0).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <StatusBadge status={order.status} />
+                  {order.last_call_status && !['Confirmed', 'Cancelled'].includes(order.status) && (
+                    <span className={cn(
+                      "px-2 py-0.5 rounded text-[10px] font-bold border",
+                      getCallStatusToneClass(order.last_call_status)
+                    )}>
+                      {order.last_call_status}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-secondary/50 rounded-xl p-3 space-y-2 text-sm">
+                <div className="font-medium text-foreground">{order.product_name || 'Unknown Product'}</div>
+                <div className="text-xs text-muted-foreground">
+                  #{order.id.replace('ORD-', '')} • {order.size ? `Size: ${order.size}` : `Qty: ${order.quantity || 1}`} • {order.source || 'Direct'}
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-mono font-bold text-primary">
+                    <ResponseTimer order={order} mode="compact" />
+                  </span>
+                  <span className={cn(
+                    "inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-bold",
+                    successRatio > 70 ? "bg-emerald-100 text-emerald-700" :
+                    successRatio > 40 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"
+                  )}>
+                    <Zap size={10} /> {showTrust ? `${successRatio}%` : 'NEW'}
+                  </span>
+                </div>
+              </div>
+
+              {isActionable && (
+                <div className="pt-2 border-t border-border flex flex-col gap-2" onClick={e => e.stopPropagation()}>
+                  <Button 
+                    className="w-full rounded-xl py-2.5 text-xs font-bold transition-colors bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm flex justify-center gap-1.5"
+                    onClick={(e) => openActionNoteModal(e, order, 'confirm')}
+                  >
+                    <CheckCircle size={14} /> Confirm Order
+                  </Button>
+                  <div className="grid grid-cols-3 gap-2">
+                    {QUICK_CALL_STATUSES.map((item) => {
+                      const Icon = item.icon;
+                      const isLoading = loggingAttemptId === order.id;
+                      return (
+                        <button
+                          key={item.id}
+                          className={cn(
+                            "flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[10px] font-bold transition-colors border shadow-sm",
+                            item.tone,
+                            isLoading ? "opacity-70 cursor-wait" : ""
+                          )}
+                          onClick={(e) => openActionNoteModal(e, order, item.id)}
+                          disabled={isLoading}
+                        >
+                          {isLoading ? <Loader2 size={12} className="animate-spin" /> : <Icon size={12} />}
+                          <span>{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      className="flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold text-red-700 bg-red-100 border border-red-200 hover:bg-red-200 shadow-sm"
+                      onClick={(e) => openActionNoteModal(e, order, 'cancel')}
+                    >
+                      <XCircle size={12} /> Cancel
+                    </button>
+                    <button
+                      className="flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-100 border border-rose-200 hover:bg-rose-200 shadow-sm"
+                      onClick={(e) => openActionNoteModal(e, order, 'fake')}
+                    >
+                      <ShieldAlert size={12} /> Fake Order
+                    </button>
+                  </div>
+                </div>
+              )}
+              {order.status === 'Confirmed' && (
+                <div className="pt-2 border-t border-border" onClick={e => e.stopPropagation()}>
+                  <Button variant="outline" className="w-full rounded-xl text-xs font-bold shadow-sm" onClick={(e) => { e.stopPropagation(); handleOpenEditModal(order); }}>
+                    <Edit2 size={14} className="mr-1.5" /> Edit Order
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {filteredOrders.length === 0 && (
+          <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground shadow-sm">
+            No orders found matching the filter criteria.
           </div>
-          <div className="elite-pagination-controls">
-            <button
-              className="elite-page-btn"
+        )}
+      </div>
+
+      {/* 5. Pagination */}
+      {filteredOrders.length > 0 && (
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-4 border-t border-border mt-4">
+          <div className="text-sm text-muted-foreground font-medium">
+            Showing {(currentPage - 1) * CALL_TASKS_PER_PAGE + 1}-
+            {Math.min(currentPage * CALL_TASKS_PER_PAGE, filteredOrders.length)} of {filteredOrders.length} tasks
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl w-8 h-8 p-0 disabled:opacity-50"
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
             >
               &lt;
-            </button>
+            </Button>
             {visiblePages.map((pageNumber) => (
-              <button
+              <Button
                 key={pageNumber}
-                className={`elite-page-btn ${currentPage === pageNumber ? 'active' : ''}`}
+                variant={currentPage === pageNumber ? "default" : "outline"}
+                size="sm"
+                className={cn("rounded-xl w-8 h-8 p-0 font-bold", currentPage === pageNumber ? "" : "text-muted-foreground")}
                 onClick={() => setCurrentPage(pageNumber)}
               >
                 {pageNumber}
-              </button>
+              </Button>
             ))}
-            <button
-              className="elite-page-btn"
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl w-8 h-8 p-0 disabled:opacity-50"
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
             >
               &gt;
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -860,7 +896,6 @@ export const CallTeamPanel = () => {
         onClose={() => setIsEditModalOpen(false)} 
         order={selectedOrder} 
       />
-
       <OrderDetailsModal 
         isOpen={isDetailsModalOpen} 
         onClose={() => setIsDetailsModalOpen(false)} 
@@ -870,44 +905,47 @@ export const CallTeamPanel = () => {
 
       <Modal
         isOpen={Boolean(pendingNoteAction)}
-        onClose={closeActionNoteModal}
+        onClose={() => closeActionNoteModal()}
         title={pendingNoteAction ? pendingNoteAction.title : 'Add Note'}
         subtitle={pendingNoteAction ? `${pendingNoteAction.customerName} • #${pendingNoteAction.orderId.replace('ORD-', '')}` : ''}
       >
-        <div className="call-action-note-modal">
-          <label className="call-action-note-label" htmlFor="call-action-note">
+        <div className="flex flex-col gap-4 p-4">
+          <p className="text-sm text-muted-foreground font-medium">
             Save this note with the order before updating the call status.
-          </label>
+          </p>
           <textarea
-            id="call-action-note"
-            className="call-action-note-input"
+            className="w-full min-h-[120px] rounded-xl border border-border bg-background p-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none placeholder:text-muted-foreground/50"
             value={actionNote}
             onChange={(e) => setActionNote(e.target.value)}
             placeholder={pendingNoteAction?.placeholder || 'Write an important customer note'}
-            rows={5}
             autoFocus
           />
-          <div className="call-action-note-footer">
-            <button
-              type="button"
-              className="call-note-btn secondary"
-              onClick={closeActionNoteModal}
+          <div className="flex justify-end gap-3 pt-2">
+            <Button
+              variant="outline"
+              className="rounded-xl font-bold"
+              onClick={() => closeActionNoteModal()}
               disabled={isSubmittingAction}
             >
               Cancel
-            </button>
-            <button
-              type="button"
-              className="call-note-btn primary"
+            </Button>
+            <Button
+              className="rounded-xl font-bold bg-primary text-primary-foreground"
               onClick={submitActionWithNote}
               disabled={isSubmittingAction || !actionNote.trim()}
             >
-              {isSubmittingAction ? 'Saving...' : `Save & ${pendingNoteAction?.title || 'Update'}`}
-            </button>
+              {isSubmittingAction ? (
+                <>
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                `Save & ${pendingNoteAction?.title || 'Update'}`
+              )}
+            </Button>
           </div>
         </div>
       </Modal>
     </div>
   );
 };
-

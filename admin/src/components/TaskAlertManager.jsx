@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import './TaskAlertManager.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTasks } from '../context/TaskContext';
 import { useAuth } from '../context/AuthContext';
 import { Bell, AlertTriangle, Calendar, User, Check, Zap, Sparkles, X, FileText } from 'lucide-react';
-import './TaskAlertManager.css';
 
 export const TaskAlertManager = () => {
   const { assignedTasks, loading } = useTasks();

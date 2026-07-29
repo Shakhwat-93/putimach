@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import './FactoryPanel.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOrders } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
@@ -15,7 +16,6 @@ import { usePersistentState } from '../utils/persistentState';
 import { getToyBoxStockKey } from '../utils/productCatalog';
 import { useRouteOrderReadState } from '../hooks/useRouteOrderReadState';
 import * as XLSX from 'xlsx';
-import './FactoryPanel.css';
 import { BulkExportModal } from '../components/BulkExportModal';
 
 const containerVariants = {
@@ -1072,21 +1072,21 @@ export const FactoryPanel = () => {
 
   return (
     <motion.div 
-      className="factory-panel"
+      className="p-3 sm:p-4 md:p-8 space-y-6 bg-background min-h-screen font-sans w-full max-w-full overflow-x-hidden"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
     >
-      <header className="page-header">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="premium-title">Confirmed Panel</h1>
-          <p className="page-subtitle">Confirmed order review, distribution and inventory verification hub.</p>
+          <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">Confirmed Panel</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Confirmed order review, distribution and inventory verification hub.</p>
         </div>
-        <div className="factory-header-actions">
+        <div className="flex items-center gap-2">
           <Button
             variant="primary"
             onClick={handleOpenExportModal}
-            className="factory-export-btn"
+            className="rounded-xl px-4 py-2 text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 flex items-center gap-2"
           >
             <FileSpreadsheet size={18} />
             <span>Bulk Export ({confirmedOrders.length})</span>
@@ -1102,7 +1102,7 @@ export const FactoryPanel = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className={`distribute-result-toast ${distributeResult.error ? 'error' : 'success'}`}
+            className={`flex items-center gap-3 p-4 rounded-xl border font-medium ${distributeResult.error ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-emerald-100 text-emerald-800 border-emerald-200'}`}
           >
             {distributeResult.error ? <AlertTriangle size={18} /> : <CheckCircle size={18} />}
             <span>
@@ -1118,179 +1118,158 @@ export const FactoryPanel = () => {
       </AnimatePresence>
 
       {/* Stats */}
-      <section className="factory-stats-row">
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <motion.div variants={itemVariants}>
-          <Card className="factory-stat-card">
-            <div className="stat-icon-box blue"><Package size={22} /></div>
-            <div className="stat-info">
-              <span className="label">Confirmed</span>
-              <span className="value">{confirmedOrders.length}</span>
+          <Card className="flex items-center gap-4 p-5 animate-slide-up border-border">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600"><Package size={22} /></div>
+            <div>
+              <span className="block text-sm font-medium text-muted-foreground">Confirmed</span>
+              <span className="block text-2xl font-bold text-foreground">{confirmedOrders.length}</span>
             </div>
           </Card>
         </motion.div>
         <motion.div variants={itemVariants}>
-          <Card className="factory-stat-card">
-            <div className="stat-icon-box orange"><AlertTriangle size={22} /></div>
-            <div className="stat-info">
-              <span className="label">Total Queued</span>
-              <span className="value">{queuedOrders.length}</span>
+          <Card className="flex items-center gap-4 p-5 animate-slide-up border-border">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-orange-100 text-orange-600"><AlertTriangle size={22} /></div>
+            <div>
+              <span className="block text-sm font-medium text-muted-foreground">Total Queued</span>
+              <span className="block text-2xl font-bold text-foreground">{queuedOrders.length}</span>
             </div>
           </Card>
         </motion.div>
         <motion.div variants={itemVariants}>
-          <Card className="factory-stat-card">
-            <div className="stat-icon-box green"><CheckCircle size={22} /></div>
-            <div className="stat-info">
-              <span className="label">Bulk Exported</span>
-              <span className="value">{orders.filter(o => o.status === 'Bulk Exported').length}</span>
+          <Card className="flex items-center gap-4 p-5 animate-slide-up border-border">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-600"><CheckCircle size={22} /></div>
+            <div>
+              <span className="block text-sm font-medium text-muted-foreground">Bulk Exported</span>
+              <span className="block text-2xl font-bold text-foreground">{orders.filter(o => o.status === 'Bulk Exported').length}</span>
             </div>
           </Card>
         </motion.div>
       </section>
 
-      {/* Tab Toggle */}
-      <div className="factory-tabs-container">
-        <div className="factory-tabs">
-          <button className={`factory-tab ${activeTab === 'confirmed' ? 'active' : ''}`} onClick={() => setActiveTab('confirmed')}>
+      {/* Tab Toggle - Scrollable pill strip without layout overflow */}
+      <div className="w-full max-w-full overflow-x-auto pb-2 scrollbar-none">
+        <div className="flex items-center gap-2 w-max bg-secondary/30 p-1.5 rounded-2xl border border-border">
+          <button 
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'confirmed' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'}`} 
+            onClick={() => setActiveTab('confirmed')}
+          >
             <Package size={16} /> Confirmed ({confirmedOrders.length})
           </button>
-          <button className={`factory-tab ${activeTab === 'queued' ? 'active' : ''}`} onClick={() => setActiveTab('queued')}>
+          <button 
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${activeTab === 'queued' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'}`} 
+            onClick={() => setActiveTab('queued')}
+          >
             <AlertTriangle size={16} /> Queue ({queuedOrders.length})
           </button>
         </div>
       </div>
 
-      <Card className="table-card" noPadding>
-        <div className="table-search-bar">
-          <PremiumSearch
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by ID, name or product..."
-            suggestions={
-              searchTerm ? orders.filter(o => 
-                o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (o.product_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (o.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase())
-              ).slice(0, 5).map(o => ({
-                id: o.id,
-                label: o.customer_name,
-                sub: `${o.id} • ${o.product_name}`,
-                type: 'order',
-                original: o
-              })) : []
-            }
-            onSuggestionClick={(item) => {
-              if (item.type === 'order') {
-                handleRowClick(item.original);
+      <Card className="flex flex-col gap-4 border-border overflow-hidden">
+        {/* Filter bar: column mobile, row desktop */}
+        <div className="flex flex-col md:flex-row gap-4 p-4 md:items-center bg-card">
+          <div className="flex-1">
+            <PremiumSearch
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by ID, name or product..."
+              suggestions={
+                searchTerm ? orders.filter(o => 
+                  o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  (o.product_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  (o.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase())
+                ).slice(0, 5).map(o => ({
+                  id: o.id,
+                  label: o.customer_name,
+                  sub: `${o.id} • ${o.product_name}`,
+                  type: 'order',
+                  original: o
+                })) : []
               }
-            }}
-          />
-          <div className="factory-date-preset-bar">
-            <div className="factory-date-preset-label">
-              <CalendarDays size={15} />
-              <span>Premium Filter</span>
-            </div>
-            <div className="factory-date-preset-tabs">
-              {DATE_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  className={`factory-date-chip ${!hasCustomRange && datePreset === preset.id ? 'active' : ''}`}
-                  onClick={() => handlePresetChange(preset.id)}
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
+              onSuggestionClick={(item) => {
+                if (item.type === 'order') {
+                  handleRowClick(item.original);
+                }
+              }}
+            />
           </div>
-          <div className="factory-range-filter">
-            <div className="factory-range-input-group">
-              <label className="factory-range-label" htmlFor="factory-date-from">From</label>
-              <input
-                id="factory-date-from"
-                type="date"
-                className="factory-range-input"
-                value={dateFrom}
-                onChange={(event) => handleDateRangeChange('from', event.target.value)}
-              />
+          
+          <div className="flex flex-col md:flex-row gap-4 md:items-center">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1 text-xs font-semibold text-muted-foreground mr-2">
+                <CalendarDays size={14} />
+                <span>FILTER</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {DATE_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${!hasCustomRange && datePreset === preset.id ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                    onClick={() => handlePresetChange(preset.id)}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="factory-range-input-group">
-              <label className="factory-range-label" htmlFor="factory-date-to">To</label>
-              <input
-                id="factory-date-to"
-                type="date"
-                className="factory-range-input"
-                value={dateTo}
-                onChange={(event) => handleDateRangeChange('to', event.target.value)}
-              />
-            </div>
-            <button
-              type="button"
-              className="factory-range-clear-btn"
-              onClick={handleClearDateRange}
-              disabled={!hasCustomRange && datePreset === 'all'}
-            >
-              Reset
-            </button>
-          </div>
-          <div className="filter-actions-group">
-            {unreadCount > 0 && (
-              <span className="route-unread-count-pill" title="Orders not opened in this Confirmed panel tab">
-                {unreadCount} unread
-              </span>
-            )}
-            <span className="order-count-badge order-count-badge--scope">
-              {hasCustomRange ? 'Custom Range' : DATE_PRESETS.find((preset) => preset.id === datePreset)?.label}
-            </span>
-            <span className="order-count-badge">{displayOrders.length} records found</span>
-          </div>
-          {activeTab === 'confirmed' && selectedConfirmedIds.length > 0 && (
-            <div className="factory-selection-toolbar">
-              <div className="factory-selection-copy">
-                <strong>{selectedConfirmedIds.length}</strong>
-                <span>confirmed orders selected</span>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-muted-foreground" htmlFor="factory-date-from">From</label>
+                <input
+                  id="factory-date-from"
+                  type="date"
+                  className="bg-secondary/50 border border-border rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  value={dateFrom}
+                  onChange={(event) => handleDateRangeChange('from', event.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-muted-foreground" htmlFor="factory-date-to">To</label>
+                <input
+                  id="factory-date-to"
+                  type="date"
+                  className="bg-secondary/50 border border-border rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  value={dateTo}
+                  onChange={(event) => handleDateRangeChange('to', event.target.value)}
+                />
               </div>
               <button
                 type="button"
-                className="factory-selection-clear"
-                onClick={() => setSelectedConfirmedIds([])}
-                disabled={isMovingSelectedConfirmed}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground underline underline-offset-2 ml-1 disabled:opacity-50"
+                onClick={handleClearDateRange}
+                disabled={!hasCustomRange && datePreset === 'all'}
               >
-                Clear
+                Reset
               </button>
-              <div className="flex gap-2">
-                <Button
-                  variant="primary"
-                  onClick={handleBulkSteadfastDispatch}
-                  disabled={isMovingSelectedConfirmed || selectedConfirmedOrders.length === 0}
-                  className="bg-brand text-white border border-brand hover:bg-brand-550 cursor-pointer"
-                >
-                  {isMovingSelectedConfirmed ? <Loader2 size={16} className="spin" /> : <Truck size={16} />}
-                  <span>Bulk Steadfast</span>
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={handleBulkPathaoDispatch}
-                  disabled={isMovingSelectedConfirmed || selectedConfirmedOrders.length === 0}
-                  className="bg-surface-secondary text-surface-primary border border-base-300/40 hover:bg-base-800 cursor-pointer"
-                >
-                  {isMovingSelectedConfirmed ? <Loader2 size={16} className="spin" /> : <Truck size={16} />}
-                  <span>Bulk Pathao</span>
-                </Button>
-              </div>
             </div>
-          )}
+          </div>
         </div>
-        
-        <div className="factory-table-wrapper">
-          <table className="factory-management-table">
+
+        <div className="px-4 pb-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+          {unreadCount > 0 && (
+            <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-bold" title="Orders not opened in this Confirmed panel tab">
+              {unreadCount} unread
+            </span>
+          )}
+          <span className="bg-secondary px-2 py-0.5 rounded-md text-xs font-medium border border-border">
+            {hasCustomRange ? 'Custom Range' : DATE_PRESETS.find((preset) => preset.id === datePreset)?.label}
+          </span>
+          <span>{displayOrders.length} records found</span>
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block rounded-2xl border-t border-border bg-card overflow-hidden shadow-sm overflow-x-auto">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr>
+              <tr className="bg-secondary/50 border-b border-border">
                 {activeTab === 'confirmed' && (
-                  <th className="factory-select-col">
+                  <th className="p-3 text-center w-12">
                     <input
                       type="checkbox"
-                      className="factory-checkbox"
+                      className="rounded border-border text-primary focus:ring-primary h-4 w-4"
                       checked={isCurrentPageSelected}
                       onChange={handleSelectConfirmedPage}
                       disabled={paginatedConfirmedIds.length === 0 || isMovingSelectedConfirmed}
@@ -1298,14 +1277,14 @@ export const FactoryPanel = () => {
                     />
                   </th>
                 )}
-                <th>Reference</th>
-                <th>Recipient</th>
-                <th>Focus Products</th>
-                <th>Stock Status</th>
-                <th>Actions</th>
+                <th className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Reference</th>
+                <th className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recipient</th>
+                <th className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Focus Products</th>
+                <th className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Stock Status</th>
+                <th className="p-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border">
               <AnimatePresence mode="popLayout">
                 {paginatedOrders.map(order => {
                   const stock = getStockStatus(order);
@@ -1318,14 +1297,14 @@ export const FactoryPanel = () => {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className={`factory-order-row cursor-pointer ${isOrderUnread(order) ? 'route-unread-row' : ''}`}
+                      className={`hover:bg-secondary/30 transition-colors cursor-pointer group ${isOrderUnread(order) ? 'bg-primary/5' : ''}`}
                       onClick={() => handleRowClick(order)}
                     >
                       {activeTab === 'confirmed' && (
-                        <td className="factory-select-cell" onClick={(event) => event.stopPropagation()}>
+                        <td className="p-3 text-center" onClick={(event) => event.stopPropagation()}>
                           <input
                             type="checkbox"
-                            className="factory-checkbox"
+                            className="rounded border-border text-primary focus:ring-primary h-4 w-4"
                             checked={selectedConfirmedIds.includes(order.id)}
                             onChange={() => handleSelectConfirmedOrder(order.id)}
                             disabled={isMovingSelectedConfirmed || order.status !== 'Confirmed'}
@@ -1333,27 +1312,27 @@ export const FactoryPanel = () => {
                           />
                         </td>
                       )}
-                      <td className="order-id-cell">
-                        <div className="route-read-card-header">
-                          {isOrderUnread(order) && <span className="route-unread-dot" aria-label="Unread order" />}
-                          <span className="saas-id">#{(order.id || '').replace('ORD-', '')}</span>
-                          {isOrderUnread(order) && <span className="route-unread-chip">New</span>}
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          {isOrderUnread(order) && <span className="w-2 h-2 rounded-full bg-primary" aria-label="Unread order" />}
+                          <span className="font-bold text-foreground group-hover:text-primary transition-colors">#{(order.id || '').replace('ORD-', '')}</span>
+                          {isOrderUnread(order) && <span className="bg-primary/10 text-primary text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">New</span>}
                         </div>
                       </td>
-                      <td>
-                        <div className="factory-customer-stack">
-                          <span className="saas-text-dark">{order.customer_name}</span>
-                          <span className="saas-text">{order.phone}</span>
+                      <td className="p-3">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-foreground">{order.customer_name}</span>
+                          <span className="text-xs text-muted-foreground">{order.phone}</span>
                         </div>
                       </td>
-                      <td>
-                        <div className="factory-product-stack">
-                          <div className="factory-product-line">
-                            <span className="saas-text-dark">{order.product_name}</span>
-                            {order.size && <span className="factory-size-pill">T-{order.size}</span>}
+                      <td className="p-3">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground">{order.product_name}</span>
+                            {order.size && <span className="bg-secondary text-secondary-foreground text-xs px-2 py-0.5 rounded-md">T-{order.size}</span>}
                           </div>
                           {isToyBox && (order.ordered_items || []).length > 0 && (
-                            <div className="factory-item-pills">
+                            <div className="flex flex-wrap gap-1 mt-1">
                               {(order.ordered_items || []).map((item, idx) => {
                                 const boxNum = typeof item === 'object' ? item.toyBoxNumber : item;
                                 if (boxNum == null) return null;
@@ -1363,7 +1342,7 @@ export const FactoryPanel = () => {
                                 const isOut = stockQty < 1;
 
                                 return (
-                                  <span key={`${order.id}-item-${idx}`} className={`factory-item-pill ${isOut ? 'out' : ''}`}>
+                                  <span key={`${order.id}-item-${idx}`} className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${isOut ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-secondary text-secondary-foreground border-border'}`}>
                                     {item?.name ? `${item.name.charAt(0)}${boxNum}` : `#${boxNum}`}
                                   </span>
                                 );
@@ -1372,50 +1351,46 @@ export const FactoryPanel = () => {
                           )}
                         </div>
                       </td>
-                      <td>
-                        <div className="factory-stock-block">
-                          <Badge variant={stock.matched ? 'success' : 'warning'} className="factory-stock-pill">
+                      <td className="p-3">
+                        <div className="flex flex-col items-start gap-1">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${stock.matched ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${stock.matched ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
                             {stock.matched ? 'Full Stock' : `${stock.missing.length} Missing`}
-                          </Badge>
+                          </span>
                           {!stock.matched && (
-                             <div className="factory-meta-note">Awaiting replenishment</div>
+                             <span className="text-[10px] text-muted-foreground">Awaiting replenishment</span>
                           )}
                         </div>
                       </td>
-                      <td className="factory-actions-cell">
-                        <div className="factory-action-grid">
-                          <button className="factory-action-btn edit" onClick={(e) => { e.stopPropagation(); handleOpenEditModal(order); }} title="Adjust Order">
-                            <Edit2 size={14} /> <span>Edit</span>
+                      <td className="p-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <button className="flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors" onClick={(e) => { e.stopPropagation(); handleOpenEditModal(order); }} title="Adjust Order">
+                            <Edit2 size={16} />
                           </button>
                           {order.status === 'Factory Queue' && (
-                            <button className="factory-action-btn retry" onClick={(e) => { e.stopPropagation(); handleRetryDistribute(order.id); }} title="Recheck Inventory">
-                               <Zap size={14} /> <span>Recheck</span>
+                            <button className="flex items-center justify-center p-2 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors" onClick={(e) => { e.stopPropagation(); handleRetryDistribute(order.id); }} title="Recheck Inventory">
+                               <Zap size={16} />
                              </button>
                           )}
                           {order.status === 'Confirmed' && (
                             <>
                               <button 
-                                className="factory-action-btn retry bg-brand/10 text-brand border border-brand/20 hover:bg-brand/20 cursor-pointer"
+                                className="flex items-center justify-center p-2 rounded-lg text-primary bg-primary/10 hover:bg-primary/20 transition-colors disabled:opacity-50"
                                 onClick={(e) => handleSteadfastDispatch(e, order)}
                                 disabled={Boolean(courierPending[order.id])}
                                 title="Send to Steadfast"
                               >
-                                {courierPending[order.id] === 'steadfast' ? <Loader2 size={12} className="spin" /> : <Truck size={12} />}
-                                <span>{courierPending[order.id] === 'steadfast' ? '...' : 'Send S-Fast'}</span>
+                                {courierPending[order.id] === 'steadfast' ? <Loader2 size={16} className="animate-spin" /> : <Truck size={16} />}
                               </button>
                               <button 
-                                className="factory-action-btn retry bg-orange-500/10 text-orange-500 border border-orange-500/20 hover:bg-orange-500/20 cursor-pointer"
+                                className="flex items-center justify-center p-2 rounded-lg text-orange-600 bg-orange-100 hover:bg-orange-200 transition-colors disabled:opacity-50"
                                 onClick={(e) => handlePathaoDispatch(e, order)}
                                 disabled={Boolean(courierPending[order.id])}
                                 title="Send to Pathao"
                               >
-                                {courierPending[order.id] === 'pathao' ? <Loader2 size={12} className="spin" /> : <Truck size={12} />}
-                                <span>{courierPending[order.id] === 'pathao' ? '...' : 'Send Pathao'}</span>
+                                {courierPending[order.id] === 'pathao' ? <Loader2 size={16} className="animate-spin" /> : <Truck size={16} />}
                               </button>
                             </>
-                          )}
-                          {!stock.matched && (
-                            <span className="factory-inline-note">{order.status === 'Confirmed' ? 'Blocked' : 'Insufficient'}</span>
                           )}
                         </div>
                       </td>
@@ -1425,17 +1400,15 @@ export const FactoryPanel = () => {
               </AnimatePresence>
               {displayOrders.length === 0 && (
                 <tr>
-                  <td colSpan={activeTab === 'confirmed' ? 6 : 5} className="empty-state-cell">
+                  <td colSpan={activeTab === 'confirmed' ? 6 : 5} className="p-12 text-center">
                     <motion.div 
-                      className="empty-state-content"
+                      className="flex flex-col items-center justify-center text-muted-foreground"
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                     >
-                      <div className="empty-icon-wrapper" style={{ opacity: 0.2 }}>
-                        <PackageSearch size={64} />
-                      </div>
-                      <h3>No records found</h3>
-                      <p>
+                      <PackageSearch size={48} className="opacity-20 mb-4" />
+                      <h3 className="text-lg font-bold text-foreground">No records found</h3>
+                      <p className="text-sm mt-1">
                         {activeTab === 'confirmed' 
                           ? 'Incoming confirmed orders will appear here for verification.' 
                           : 'Queue is empty. No orders are currently blocked due to stock.'}
@@ -1448,25 +1421,145 @@ export const FactoryPanel = () => {
           </table>
         </div>
 
+        {/* Mobile Cards View */}
+        <div className="md:hidden space-y-3 px-4 py-2">
+          <AnimatePresence mode="popLayout">
+            {paginatedOrders.map(order => {
+              const stock = getStockStatus(order);
+              const isToyBox = (order.product_name || '').toUpperCase().includes('TOY BOX');
+              
+              return (
+                <motion.div 
+                  key={order.id} 
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className={`bg-card rounded-2xl border p-4 shadow-sm relative ${isOrderUnread(order) ? 'border-primary/30' : 'border-border'}`}
+                  onClick={() => handleRowClick(order)}
+                >
+                  {isOrderUnread(order) && (
+                    <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden pointer-events-none">
+                      <div className="absolute top-2 -right-6 bg-primary text-primary-foreground text-[8px] font-bold py-0.5 px-6 transform rotate-45 uppercase tracking-wider">
+                        New
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      {activeTab === 'confirmed' && (
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            className="rounded border-border text-primary focus:ring-primary h-5 w-5"
+                            checked={selectedConfirmedIds.includes(order.id)}
+                            onChange={() => handleSelectConfirmedOrder(order.id)}
+                            disabled={isMovingSelectedConfirmed || order.status !== 'Confirmed'}
+                          />
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-bold text-foreground text-lg">#{(order.id || '').replace('ORD-', '')}</div>
+                        <div className="text-sm text-muted-foreground">{order.customer_name} • {order.phone}</div>
+                      </div>
+                    </div>
+                    <button className="text-muted-foreground hover:text-foreground p-1" onClick={(e) => { e.stopPropagation(); handleOpenEditModal(order); }}>
+                      <Edit2 size={18} />
+                    </button>
+                  </div>
+
+                  <div className="bg-secondary/40 rounded-xl p-3 mb-3 border border-border">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="font-medium text-foreground">{order.product_name}</div>
+                      {order.size && <span className="bg-secondary text-secondary-foreground text-xs px-2 py-0.5 rounded-md ml-2 shrink-0">T-{order.size}</span>}
+                    </div>
+                    
+                    {isToyBox && (order.ordered_items || []).length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-border/50">
+                        {(order.ordered_items || []).map((item, idx) => {
+                          const boxNum = typeof item === 'object' ? item.toyBoxNumber : item;
+                          if (boxNum == null) return null;
+                          const productName = typeof item === 'object' ? (item.name || order.product_name || 'TOY BOX') : 'TOY BOX';
+                          const stockKey = getToyBoxStockKey(productName, boxNum);
+                          const stockQty = toyBoxes.find((box) => getToyBoxStockKey(box.product_name || 'TOY BOX', box.toy_box_number) === stockKey)?.stock_quantity || 0;
+                          const isOut = stockQty < 1;
+
+                          return (
+                            <span key={`${order.id}-item-${idx}`} className={`text-xs font-bold px-2 py-1 rounded-md border ${isOut ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-secondary text-secondary-foreground border-border'}`}>
+                              {item?.name ? `${item.name.charAt(0)}${boxNum}` : `#${boxNum}`}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+                    <div className="flex flex-col items-start gap-1">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${stock.matched ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${stock.matched ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                        {stock.matched ? 'Full Stock' : `${stock.missing.length} Missing`}
+                      </span>
+                    </div>
+
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                      {order.status === 'Factory Queue' && (
+                        <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 transition-colors" onClick={() => handleRetryDistribute(order.id)}>
+                           <Zap size={14} /> Recheck
+                         </button>
+                      )}
+                      {order.status === 'Confirmed' && (
+                        <>
+                          <button 
+                            className="flex items-center justify-center p-2 rounded-lg text-primary bg-primary/10 hover:bg-primary/20 transition-colors disabled:opacity-50"
+                            onClick={(e) => handleSteadfastDispatch(e, order)}
+                            disabled={Boolean(courierPending[order.id])}
+                          >
+                            {courierPending[order.id] === 'steadfast' ? <Loader2 size={16} className="animate-spin" /> : <Truck size={16} />}
+                          </button>
+                          <button 
+                            className="flex items-center justify-center p-2 rounded-lg text-orange-600 bg-orange-100 hover:bg-orange-200 transition-colors disabled:opacity-50"
+                            onClick={(e) => handlePathaoDispatch(e, order)}
+                            disabled={Boolean(courierPending[order.id])}
+                          >
+                            {courierPending[order.id] === 'pathao' ? <Loader2 size={16} className="animate-spin" /> : <Truck size={16} />}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+          {displayOrders.length === 0 && (
+            <div className="p-10 text-center bg-card rounded-2xl border border-border">
+              <PackageSearch size={40} className="mx-auto text-muted-foreground opacity-30 mb-3" />
+              <h3 className="font-bold text-foreground">No records found</h3>
+            </div>
+          )}
+        </div>
+
         {displayOrders.length > 0 && (
-          <div className="factory-pagination-footer">
-            <div className="factory-pagination-info">
+          <div className="flex flex-col md:flex-row items-center justify-between p-4 border-t border-border bg-card gap-4 text-sm">
+            <div className="text-muted-foreground text-center md:text-left">
               Showing {(currentPage - 1) * FACTORY_PAGE_SIZE + 1}-
               {Math.min(currentPage * FACTORY_PAGE_SIZE, displayOrders.length)} of {displayOrders.length} records
             </div>
-            <div className="factory-pagination-actions">
+            <div className="flex items-center gap-1">
               <button
-                className="factory-page-btn"
+                className="px-3 py-1.5 rounded-lg border border-border bg-card text-foreground hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
               >
-                Previous
+                Prev
               </button>
-              <div className="factory-page-numbers">
+              <div className="flex items-center gap-1 overflow-x-auto max-w-[200px] px-1">
                 {visiblePages.map((pageNumber) => (
                   <button
                     key={pageNumber}
-                    className={`factory-page-btn factory-page-num ${currentPage === pageNumber ? 'active' : ''}`}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium transition-colors shrink-0 ${currentPage === pageNumber ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-secondary'}`}
                     onClick={() => setCurrentPage(pageNumber)}
                   >
                     {pageNumber}
@@ -1474,7 +1567,7 @@ export const FactoryPanel = () => {
                 ))}
               </div>
               <button
-                className="factory-page-btn"
+                className="px-3 py-1.5 rounded-lg border border-border bg-card text-foreground hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
               >
@@ -1484,6 +1577,53 @@ export const FactoryPanel = () => {
           </div>
         )}
       </Card>
+
+      {/* Bulk Action Bar - Sticky at bottom */}
+      <AnimatePresence>
+        {activeTab === 'confirmed' && selectedConfirmedIds.length > 0 && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-4 left-4 right-4 md:relative md:bottom-auto rounded-2xl border border-border bg-card/95 backdrop-blur-xl shadow-xl p-3 flex flex-col md:flex-row md:items-center justify-between z-20 gap-3"
+          >
+            <div className="flex items-center justify-between md:justify-start gap-4">
+              <div className="text-sm">
+                <strong className="text-foreground text-lg">{selectedConfirmedIds.length}</strong>
+                <span className="text-muted-foreground ml-2">orders selected</span>
+              </div>
+              <button
+                type="button"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground underline underline-offset-2 disabled:opacity-50"
+                onClick={() => setSelectedConfirmedIds([])}
+                disabled={isMovingSelectedConfirmed}
+              >
+                Clear selection
+              </button>
+            </div>
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Button
+                variant="primary"
+                onClick={handleBulkSteadfastDispatch}
+                disabled={isMovingSelectedConfirmed || selectedConfirmedOrders.length === 0}
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-xl text-sm font-bold shadow-sm"
+              >
+                {isMovingSelectedConfirmed ? <Loader2 size={16} className="animate-spin" /> : <Truck size={16} />}
+                <span>Bulk Steadfast</span>
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={handleBulkPathaoDispatch}
+                disabled={isMovingSelectedConfirmed || selectedConfirmedOrders.length === 0}
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-orange-500 text-white hover:bg-orange-600 px-4 py-2 rounded-xl text-sm font-bold shadow-sm"
+              >
+                {isMovingSelectedConfirmed ? <Loader2 size={16} className="animate-spin" /> : <Truck size={16} />}
+                <span>Bulk Pathao</span>
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <OrderEditModal 
         isOpen={isEditModalOpen} 
@@ -1501,7 +1641,6 @@ export const FactoryPanel = () => {
         exportedBy={profile?.name || user?.user_metadata?.full_name || user?.email || 'User'}
       />
 
-
       <OrderDetailsModal 
         isOpen={isDetailsModalOpen} 
         onClose={() => setIsDetailsModalOpen(false)} 
@@ -1513,3 +1652,4 @@ export const FactoryPanel = () => {
     </motion.div>
   );
 };
+

@@ -1,5 +1,6 @@
 // admin/src/pages/StorefrontManagement.jsx
 import { useState, useEffect } from 'react';
+import './StorefrontManagement.css';
 import { supabase } from '../lib/supabase';
 import { convertToWebP } from '../utils/image';
 import {
@@ -34,7 +35,8 @@ import {
   AlertDialogTitle,
 } from '../components/ui/alert-dialog';
 import { Modal } from '../components/Modal';
-import './StorefrontManagement.css';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
+import { Switch } from '../components/ui/switch';
 
 // Reusable Image Upload Input Component connected to Supabase Storage
 const ImageUploadInput = ({ label, value, onChange, placeholder, required = false, local = false }) => {
@@ -75,12 +77,12 @@ const ImageUploadInput = ({ label, value, onChange, placeholder, required = fals
   };
 
   return (
-    <div className="sf-form-group full-width">
-      <label className="sf-label">{label}</label>
+    <div className="flex flex-col gap-2 md:col-span-2">
+      <label className="text-sm font-medium text-foreground">{label}</label>
       <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch' }}>
         <input
           type="text"
-          className="sf-input"
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           style={{ flex: 1 }}
           placeholder={placeholder}
           value={value}
@@ -88,7 +90,7 @@ const ImageUploadInput = ({ label, value, onChange, placeholder, required = fals
           required={required}
         />
         <label 
-          className="action-btn-green"
+          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
           style={{ 
             display: 'flex', 
             alignItems: 'center', 
@@ -192,8 +194,8 @@ const MultipleImageUploadInput = ({ label, value = [], onChange }) => {
   };
 
   return (
-    <div className="sf-form-group full-width" style={{ gridColumn: '1 / -1' }}>
-      <label className="sf-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="flex flex-col gap-2 md:col-span-2" style={{ gridColumn: '1 / -1' }}>
+      <label className="text-sm font-medium text-foreground" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>{label}</span>
         <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{value.length} images uploaded</span>
       </label>
@@ -201,7 +203,7 @@ const MultipleImageUploadInput = ({ label, value = [], onChange }) => {
       {/* Upload area */}
       <div style={{ marginBottom: '16px' }}>
         <label 
-          className="action-btn-green"
+          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
           style={{ 
             display: 'inline-flex', 
             alignItems: 'center', 
@@ -402,15 +404,15 @@ const SizeGuideTableEditor = ({ value, onChange }) => {
   };
 
   return (
-    <div className="sf-form-group full-width" style={{ marginTop: '16px', borderTop: '1px solid var(--glass-border)', paddingTop: '20px', gridColumn: '1 / -1' }}>
-      <label className="sf-label" style={{ fontSize: '13px', color: 'var(--accent)', marginBottom: '8px', display: 'block' }}>Size Chart Builder</label>
+    <div className="flex flex-col gap-2 md:col-span-2" style={{ marginTop: '16px', borderTop: '1px solid var(--glass-border)', paddingTop: '20px', gridColumn: '1 / -1' }}>
+      <label className="text-sm font-medium text-foreground" style={{ fontSize: '13px', color: 'var(--accent)', marginBottom: '8px', display: 'block' }}>Size Chart Builder</label>
       
       {/* Material/Composition field */}
-      <div className="sf-form-group" style={{ marginBottom: '16px', maxWidth: '300px' }}>
-        <label className="sf-label" style={{ fontSize: '10px' }}>Material / Composition</label>
+      <div className="flex flex-col gap-2" style={{ marginBottom: '16px', maxWidth: '300px' }}>
+        <label className="text-sm font-medium text-foreground" style={{ fontSize: '10px' }}>Material / Composition</label>
         <input 
           type="text" 
-          className="sf-input" 
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
           value={material} 
           onChange={(e) => handleMaterialChange(e.target.value)}
           placeholder="e.g. Cotton 100%"
@@ -421,7 +423,7 @@ const SizeGuideTableEditor = ({ value, onChange }) => {
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
         <input 
           type="text" 
-          className="sf-input" 
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
           style={{ width: '180px', padding: '6px 12px', fontSize: '12px' }}
           placeholder="New Column (e.g. Rise)"
           value={newColName}
@@ -429,7 +431,7 @@ const SizeGuideTableEditor = ({ value, onChange }) => {
         />
         <button 
           type="button" 
-          className="action-btn-green"
+          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
           onClick={addColumn}
           style={{ padding: '6px 16px', fontSize: '12px', borderRadius: '4px', height: 'auto', boxShadow: 'none' }}
         >
@@ -469,7 +471,7 @@ const SizeGuideTableEditor = ({ value, onChange }) => {
                   <td key={col} style={{ padding: '6px' }}>
                     <input 
                       type="text" 
-                      className="sf-input" 
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                       style={{ 
                         width: '100%', 
                         padding: '6px', 
@@ -510,7 +512,7 @@ const SizeGuideTableEditor = ({ value, onChange }) => {
 
       <button 
         type="button" 
-        className="action-btn-green"
+        className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
         onClick={addRow}
         style={{ padding: '8px 20px', fontSize: '12px', borderRadius: '4px', height: 'auto', boxShadow: 'none' }}
       >
@@ -1284,27 +1286,27 @@ export const StorefrontManagement = () => {
   });
 
   return (
-    <div className="storefront-mgmt content-scrollable">
+    <div className="p-6 h-full overflow-y-auto bg-background text-foreground">
       
       {/* Elite Enterprise Header */}
-      <div className="elite-enterprise-header">
-        <div className="title-group-elite">
-          <h1 className="premium-title-enterprise text-dark">
-            Storefront <span className="text-accent-indigo">Management</span>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div className="flex flex-col">
+          <h1 className="text-3xl font-display font-bold tracking-tight">
+            Storefront <span className="text-primary">Management</span>
           </h1>
-          <p className="premium-subtitle-enterprise">
+          <p className="text-muted-foreground mt-1">
             Control products, categories, collections, and custom banners in real time.
           </p>
         </div>
 
-        <div className="header-actions-enterprise">
+        <div className="flex items-center gap-3">
           {activeTab === 'products' && (
-            <Button variant="primary" className="action-btn-green" onClick={() => openProductModal(null)}>
+            <Button variant="primary" className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2" onClick={() => openProductModal(null)}>
               <Plus size={16} /> Add Product
             </Button>
           )}
           {activeTab === 'categories' && (
-            <Button variant="primary" className="action-btn-green" onClick={() => openCategoryModal(null)}>
+            <Button variant="primary" className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2" onClick={() => openCategoryModal(null)}>
               <Plus size={16} /> Add Category
             </Button>
           )}
@@ -1312,57 +1314,47 @@ export const StorefrontManagement = () => {
       </div>
 
       {/* Tabs navigation */}
-      <div className="sf-tabs-bar">
-        <button 
-          onClick={() => setActiveTab('products')} 
-          className={`sf-tab-btn ${activeTab === 'products' ? 'active' : ''}`}
-        >
-          <Package size={16} /> Products ({products.length})
-        </button>
-        <button 
-          onClick={() => setActiveTab('categories')} 
-          className={`sf-tab-btn ${activeTab === 'categories' ? 'active' : ''}`}
-        >
-          <Layers size={16} /> Categories ({categories.length})
-        </button>
-        <button 
-          onClick={() => setActiveTab('banners')} 
-          className={`sf-tab-btn ${activeTab === 'banners' ? 'active' : ''}`}
-        >
-          <Sliders size={16} /> Banners & Sections
-        </button>
-        <button 
-          onClick={() => setActiveTab('nav')} 
-          className={`sf-tab-btn ${activeTab === 'nav' ? 'active' : ''}`}
-        >
-          <Menu size={16} /> Navigation Menu
-        </button>
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="mb-6 w-full justify-start overflow-x-auto h-auto p-1 bg-muted/50 rounded-lg flex space-x-2">
+          <TabsTrigger value="products" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md px-4 py-2">
+            <Package size={16} /> Products ({products.length})
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md px-4 py-2">
+            <Layers size={16} /> Categories ({categories.length})
+          </TabsTrigger>
+          <TabsTrigger value="banners" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md px-4 py-2">
+            <Sliders size={16} /> Banners & Sections
+          </TabsTrigger>
+          <TabsTrigger value="nav" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md px-4 py-2">
+            <Menu size={16} /> Navigation Menu
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {loading ? (
-        <div className="sf-loader-container">
-          <Loader2 size={36} className="sf-loader" />
+        <div className="flex justify-center items-center h-64">
+          <Loader2 size={36} className="animate-spin text-primary" />
         </div>
       ) : (
-        <div className="sf-tab-content">
+        <div className="animate-slide-up">
           
           {/* 1. PRODUCTS TAB */}
           {activeTab === 'products' && (
             <div className="space-y-6">
               {/* Filters */}
-              <div className="sf-search-filters">
-                <div className="search-input-wrapper flex-1">
-                  <Search size={16} className="search-icon" />
+              <div className="flex flex-col md:flex-row gap-4 mb-6">
+                <div className="relative flex-1">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input 
                     type="text" 
                     placeholder="Search products by name or slug..." 
-                    className="search-field"
+                    className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
                 <select 
-                  className="sf-select max-w-[200px]" 
+                  className="px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 w-full md:w-auto" 
                   value={selectedCategoryFilter}
                   onChange={(e) => setSelectedCategoryFilter(e.target.value)}
                 >
@@ -1379,20 +1371,20 @@ export const StorefrontManagement = () => {
                   No products found matching filters.
                 </div>
               ) : (
-                <div className="sf-products-grid">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {filteredProducts.map(p => (
-                    <div key={p.id} className="sf-card">
-                      <div className="sf-card-image-wrapper">
+                    <div key={p.id} className="flex flex-col rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                      <div className="relative aspect-square bg-muted overflow-hidden flex items-center justify-center">
                         {p.image ? (
-                          <img src={p.image} alt={p.name} className="sf-card-image" />
+                          <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
                         ) : (
                           <Package size={32} className="text-surface-muted" />
                         )}
-                        {p.badge && <span className="sf-badge-pill">{p.badge}</span>}
+                        {p.badge && <span className="absolute top-3 left-3 bg-primary text-primary-foreground text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">{p.badge}</span>}
                       </div>
 
-                      <div className="sf-card-body">
-                        <div className="sf-card-meta">
+                      <div className="p-4 flex flex-col flex-1">
+                        <div className="flex justify-between items-center text-xs mb-2">
                           <span className="text-brand font-semibold">{p.category}</span>
                           {p.inventory_id ? (
                             <span className={p.inventory?.current_stock > 0 ? "text-green-500 font-bold animate-pulse" : "text-red-500 font-bold"}>
@@ -1404,18 +1396,18 @@ export const StorefrontManagement = () => {
                             </span>
                           )}
                         </div>
-                        <h3 className="sf-card-title">{p.name}</h3>
+                        <h3 className="font-bold text-base text-foreground mb-1 line-clamp-1">{p.name}</h3>
                         <p className="text-xs text-surface-muted truncate">/{p.slug}</p>
                         
-                        <div className="sf-card-price-group">
-                          <span className="sf-price-current">৳{p.price}</span>
+                        <div className="flex items-center gap-2 mt-auto pt-4">
+                          <span className="font-bold text-lg text-foreground">৳{p.price}</span>
                           {p.original_price && (
-                            <span className="sf-price-original">৳{p.original_price}</span>
+                            <span className="text-sm text-muted-foreground line-through">৳{p.original_price}</span>
                           )}
                         </div>
                       </div>
 
-                      <div className="sf-card-footer">
+                      <div className="px-4 py-3 border-t border-border bg-secondary/30 flex justify-between items-center">
                         <Button variant="ghost" size="sm" onClick={() => openProductModal(p)}>
                           <Edit2 size={13} /> Edit
                         </Button>
@@ -1433,22 +1425,22 @@ export const StorefrontManagement = () => {
           {/* 2. CATEGORIES TAB */}
           {activeTab === 'categories' && (
             <div className="space-y-6">
-              <div className="sf-categories-grid">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {categories.map(c => (
-                  <div key={c.id} className="sf-card">
-                    <div className="sf-card-image-wrapper">
+                  <div key={c.id} className="flex flex-col rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    <div className="relative aspect-square bg-muted overflow-hidden flex items-center justify-center">
                       {c.image_url ? (
-                        <img src={c.image_url} alt={c.name} className="sf-card-image" />
+                        <img src={c.image_url} alt={c.name} className="w-full h-full object-cover" />
                       ) : (
                         <Layers size={32} className="text-surface-muted" />
                       )}
                     </div>
-                    <div className="sf-card-body">
-                      <h3 className="sf-card-title">{c.name}</h3>
+                    <div className="p-4 flex flex-col flex-1">
+                      <h3 className="font-bold text-base text-foreground mb-1 line-clamp-1">{c.name}</h3>
                       <p className="text-xs text-surface-muted">slug: /{c.slug}</p>
                       <p className="text-sm text-surface-secondary mt-2 leading-relaxed line-clamp-2">{c.description || 'No description provided.'}</p>
                     </div>
-                    <div className="sf-card-footer">
+                    <div className="px-4 py-3 border-t border-border bg-secondary/30 flex justify-between items-center">
                       <Button variant="ghost" size="sm" onClick={() => openCategoryModal(c)}>
                         <Edit2 size={13} /> Edit
                       </Button>
@@ -1464,100 +1456,100 @@ export const StorefrontManagement = () => {
 
           {/* 3. BANNERS TAB (SITE CUSTOMIZER) */}
           {activeTab === 'banners' && (
-            <div className="sf-banners-layout">
+            <div className="flex flex-col md:flex-row gap-6">
               {/* Sidebar */}
-              <div className="sf-editor-sidebar">
+              <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-visible w-full md:w-64 shrink-0 pb-2 md:pb-0 scrollbar-hide">
                 <button 
                   onClick={() => setBannerSection('hero')} 
-                  className={`sf-sidebar-section-btn ${bannerSection === 'hero' ? 'active' : ''}`}
+                  className={`px-4 py-3 text-sm font-medium rounded-xl text-left whitespace-nowrap transition-colors ${bannerSection === "hero" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
                 >
                   Hero Banner
                 </button>
                 <button 
                   onClick={() => setBannerSection('shop_slider')} 
-                  className={`sf-sidebar-section-btn ${bannerSection === 'shop_slider' ? 'active' : ''}`}
+                  className={`px-4 py-3 text-sm font-medium rounded-xl text-left whitespace-nowrap transition-colors ${bannerSection === "shop_slider" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
                 >
                   Shop Page Slider
                 </button>
                 <button 
                   onClick={() => setBannerSection('drops')} 
-                  className={`sf-sidebar-section-btn ${bannerSection === 'drops' ? 'active' : ''}`}
+                  className={`px-4 py-3 text-sm font-medium rounded-xl text-left whitespace-nowrap transition-colors ${bannerSection === "drops" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
                 >
                   Collections & Drops
                 </button>
                 <button 
                   onClick={() => setBannerSection('story')} 
-                  className={`sf-sidebar-section-btn ${bannerSection === 'story' ? 'active' : ''}`}
+                  className={`px-4 py-3 text-sm font-medium rounded-xl text-left whitespace-nowrap transition-colors ${bannerSection === "story" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
                 >
                   Brand Story
                 </button>
                 <button 
                   onClick={() => setBannerSection('instagram')} 
-                  className={`sf-sidebar-section-btn ${bannerSection === 'instagram' ? 'active' : ''}`}
+                  className={`px-4 py-3 text-sm font-medium rounded-xl text-left whitespace-nowrap transition-colors ${bannerSection === "instagram" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
                 >
                   Social / Instagram
                 </button>
                 <button 
                   onClick={() => setBannerSection('shipping')} 
-                  className={`sf-sidebar-section-btn ${bannerSection === 'shipping' ? 'active' : ''}`}
+                  className={`px-4 py-3 text-sm font-medium rounded-xl text-left whitespace-nowrap transition-colors ${bannerSection === "shipping" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
                 >
                   Shipping Charges
                 </button>
                 <button 
                   onClick={() => setBannerSection('contact')} 
-                  className={`sf-sidebar-section-btn ${bannerSection === 'contact' ? 'active' : ''}`}
+                  className={`px-4 py-3 text-sm font-medium rounded-xl text-left whitespace-nowrap transition-colors ${bannerSection === "contact" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
                 >
                   Contact & Popups
                 </button>
                 <button 
                   onClick={() => setBannerSection('contact_info')} 
-                  className={`sf-sidebar-section-btn ${bannerSection === 'contact_info' ? 'active' : ''}`}
+                  className={`px-4 py-3 text-sm font-medium rounded-xl text-left whitespace-nowrap transition-colors ${bannerSection === "contact_info" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
                 >
                   📞 Contact Info Page
                 </button>
                 <button 
                   onClick={() => setBannerSection('faq')} 
-                  className={`sf-sidebar-section-btn ${bannerSection === 'faq' ? 'active' : ''}`}
+                  className={`px-4 py-3 text-sm font-medium rounded-xl text-left whitespace-nowrap transition-colors ${bannerSection === "faq" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
                 >
                   ❓ FAQ Page
                 </button>
                 <button 
                   onClick={() => setBannerSection('return_policy')} 
-                  className={`sf-sidebar-section-btn ${bannerSection === 'return_policy' ? 'active' : ''}`}
+                  className={`px-4 py-3 text-sm font-medium rounded-xl text-left whitespace-nowrap transition-colors ${bannerSection === "return_policy" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
                 >
                   🔄 Returns & Exchanges
                 </button>
                 <button 
                   onClick={() => setBannerSection('trust')} 
-                  className={`sf-sidebar-section-btn ${bannerSection === 'trust' ? 'active' : ''}`}
+                  className={`px-4 py-3 text-sm font-medium rounded-xl text-left whitespace-nowrap transition-colors ${bannerSection === "trust" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}
                 >
                   Checkout Trust Badges
                 </button>
               </div>
 
               {/* Editor Card */}
-              <div className="sf-editor-content-card">
+              <div className="flex-1 bg-card rounded-2xl border border-border p-6 shadow-sm">
                 <form onSubmit={handleSaveHomeSettings} className="space-y-6">
                   
                   {/* Hero banner section */}
                   {bannerSection === 'hero' && (
                     <div className="space-y-4">
                       <h2 className="text-h3 font-black border-b border-base-800 pb-2">Hero Section Banner</h2>
-                      <div className="sf-form-grid">
-                        <div className="sf-form-group">
-                          <label className="sf-label">Hero Badge</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Hero Badge</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.heroBadge}
                             onChange={(e) => setHomeSettings({ ...homeSettings, heroBadge: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">Hero Sub-Badge</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Hero Sub-Badge</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.heroSubBadge}
                             onChange={(e) => setHomeSettings({ ...homeSettings, heroSubBadge: e.target.value })}
                           />
@@ -1568,27 +1560,27 @@ export const StorefrontManagement = () => {
                           onChange={(val) => setHomeSettings({ ...homeSettings, heroBgImage: val })}
                           placeholder="e.g. /images/hero-banner.webp"
                         />
-                        <div className="sf-form-group full-width">
-                          <label className="sf-label">Hero Main Heading</label>
+                        <div className="flex flex-col gap-2 md:col-span-2">
+                          <label className="text-sm font-medium text-foreground">Hero Main Heading</label>
                           <textarea 
-                            className="sf-textarea" 
+                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.heroHeading}
                             onChange={(e) => setHomeSettings({ ...homeSettings, heroHeading: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group full-width">
-                          <label className="sf-label">Hero Subtext description</label>
+                        <div className="flex flex-col gap-2 md:col-span-2">
+                          <label className="text-sm font-medium text-foreground">Hero Subtext description</label>
                           <textarea 
-                            className="sf-textarea" 
+                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.heroSubtext}
                             onChange={(e) => setHomeSettings({ ...homeSettings, heroSubtext: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">Hero Button CTA text</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Hero Button CTA text</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.heroButtonText}
                             onChange={(e) => setHomeSettings({ ...homeSettings, heroButtonText: e.target.value })}
                           />
@@ -1657,67 +1649,67 @@ export const StorefrontManagement = () => {
                   {bannerSection === 'drops' && (
                     <div className="space-y-4">
                       <h2 className="text-h3 font-black border-b border-base-800 pb-2">Collections & Catalog Sections</h2>
-                      <div className="sf-form-grid">
-                        <div className="sf-form-group">
-                          <label className="sf-label">Categories Section Sub-title</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Categories Section Sub-title</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.collectionsLabel}
                             onChange={(e) => setHomeSettings({ ...homeSettings, collectionsLabel: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">Categories Section Main Title</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Categories Section Main Title</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.collectionsTitle}
                             onChange={(e) => setHomeSettings({ ...homeSettings, collectionsTitle: e.target.value })}
                           />
                         </div>
                         
-                        <div className="sf-form-group">
-                          <label className="sf-label">New Arrivals Section Sub-title</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">New Arrivals Section Sub-title</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.latestLabel}
                             onChange={(e) => setHomeSettings({ ...homeSettings, latestLabel: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">New Arrivals Section Title</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">New Arrivals Section Title</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.latestTitle}
                             onChange={(e) => setHomeSettings({ ...homeSettings, latestTitle: e.target.value })}
                           />
                         </div>
 
-                        <div className="sf-form-group">
-                          <label className="sf-label">Catalog Section Sub-title</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Catalog Section Sub-title</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.catalogLabel}
                             onChange={(e) => setHomeSettings({ ...homeSettings, catalogLabel: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">Catalog Section Title</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Catalog Section Title</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.catalogTitle}
                             onChange={(e) => setHomeSettings({ ...homeSettings, catalogTitle: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group full-width">
-                          <label className="sf-label">Catalog Subtext Description</label>
+                        <div className="flex flex-col gap-2 md:col-span-2">
+                          <label className="text-sm font-medium text-foreground">Catalog Subtext Description</label>
                           <textarea 
-                            className="sf-textarea" 
+                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.catalogSubtext}
                             onChange={(e) => setHomeSettings({ ...homeSettings, catalogSubtext: e.target.value })}
                           />
@@ -1730,21 +1722,21 @@ export const StorefrontManagement = () => {
                   {bannerSection === 'story' && (
                     <div className="space-y-4">
                       <h2 className="text-h3 font-black border-b border-base-800 pb-2">Brand Story</h2>
-                      <div className="sf-form-grid">
-                        <div className="sf-form-group">
-                          <label className="sf-label">Story Section Sub-title</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Story Section Sub-title</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.brandStoryLabel}
                             onChange={(e) => setHomeSettings({ ...homeSettings, brandStoryLabel: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">Story Section Title</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Story Section Title</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.brandStoryTitle}
                             onChange={(e) => setHomeSettings({ ...homeSettings, brandStoryTitle: e.target.value })}
                           />
@@ -1761,27 +1753,27 @@ export const StorefrontManagement = () => {
                           onChange={(val) => setHomeSettings({ ...homeSettings, brandStoryImage2: val })}
                           placeholder="e.g. /images/story-image2.webp"
                         />
-                        <div className="sf-form-group">
-                          <label className="sf-label">Story Button Text</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Story Button Text</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.brandStoryButtonText || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, brandStoryButtonText: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group full-width">
-                          <label className="sf-label">Story Paragraph 1</label>
+                        <div className="flex flex-col gap-2 md:col-span-2">
+                          <label className="text-sm font-medium text-foreground">Story Paragraph 1</label>
                           <textarea 
-                            className="sf-textarea" 
+                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.brandStoryText1}
                             onChange={(e) => setHomeSettings({ ...homeSettings, brandStoryText1: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group full-width">
-                          <label className="sf-label">Story Paragraph 2</label>
+                        <div className="flex flex-col gap-2 md:col-span-2">
+                          <label className="text-sm font-medium text-foreground">Story Paragraph 2</label>
                           <textarea 
-                            className="sf-textarea" 
+                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.brandStoryText2}
                             onChange={(e) => setHomeSettings({ ...homeSettings, brandStoryText2: e.target.value })}
                           />
@@ -1794,39 +1786,39 @@ export const StorefrontManagement = () => {
                   {bannerSection === 'instagram' && (
                     <div className="space-y-4">
                       <h2 className="text-h3 font-black border-b border-base-800 pb-2">Social Feed & Instagram Channel</h2>
-                      <div className="sf-form-grid">
-                        <div className="sf-form-group">
-                          <label className="sf-label">Instagram Section Sub-title</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Instagram Section Sub-title</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.instagramLabel}
                             onChange={(e) => setHomeSettings({ ...homeSettings, instagramLabel: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">Instagram Section Title</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Instagram Section Title</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.instagramTitle}
                             onChange={(e) => setHomeSettings({ ...homeSettings, instagramTitle: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group full-width">
-                          <label className="sf-label">Instagram URL / Profile link</label>
+                        <div className="flex flex-col gap-2 md:col-span-2">
+                          <label className="text-sm font-medium text-foreground">Instagram URL / Profile link</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.instagramUrl}
                             onChange={(e) => setHomeSettings({ ...homeSettings, instagramUrl: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">Instagram Subtext Description</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Instagram Subtext Description</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.instagramSubtext}
                             onChange={(e) => setHomeSettings({ ...homeSettings, instagramSubtext: e.target.value })}
                           />
@@ -1871,39 +1863,39 @@ export const StorefrontManagement = () => {
                   {bannerSection === 'shipping' && (
                     <div className="space-y-4">
                       <h2 className="text-h3 font-black border-b border-base-800 pb-2">Delivery & Shipping Fees</h2>
-                      <div className="sf-form-grid">
-                        <div className="sf-form-group">
-                          <label className="sf-label">Inside Dhaka Delivery Fee (৳)</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Inside Dhaka Delivery Fee (৳)</label>
                           <input 
                             type="number" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.shippingInsideDhaka || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, shippingInsideDhaka: Number(e.target.value) })}
                           />
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">Sub Dhaka Delivery Fee (Savar, Gazipur, Narayanganj) (৳)</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Sub Dhaka Delivery Fee (Savar, Gazipur, Narayanganj) (৳)</label>
                           <input 
                             type="number" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.shippingSubDhaka || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, shippingSubDhaka: Number(e.target.value) })}
                           />
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">Outside Dhaka Delivery Fee (৳)</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Outside Dhaka Delivery Fee (৳)</label>
                           <input 
                             type="number" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.shippingOutsideDhaka || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, shippingOutsideDhaka: Number(e.target.value) })}
                           />
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">Free Delivery Threshold Min Order (৳)</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Free Delivery Threshold Min Order (৳)</label>
                           <input 
                             type="number" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.freeDeliveryThreshold || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, freeDeliveryThreshold: Number(e.target.value) })}
                           />
@@ -1911,10 +1903,10 @@ export const StorefrontManagement = () => {
 
                         <h3 className="text-sm font-bold full-width border-b border-base-800 pb-1 mt-4" style={{ gridColumn: '1 / -1' }}>Auto Discount Promotion</h3>
 
-                        <div className="sf-form-group">
-                          <label className="sf-label">Enable Promotion Discount?</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Enable Promotion Discount?</label>
                           <select 
-                            className="sf-select"
+                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             value={homeSettings.discountEnabled || 'true'}
                             onChange={(e) => setHomeSettings({ ...homeSettings, discountEnabled: e.target.value })}
                           >
@@ -1922,20 +1914,20 @@ export const StorefrontManagement = () => {
                             <option value="false">No</option>
                           </select>
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">Discount Threshold Min Order (৳)</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Discount Threshold Min Order (৳)</label>
                           <input 
                             type="number" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.discountThreshold || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, discountThreshold: Number(e.target.value) })}
                           />
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">Discount Amount (৳)</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Discount Amount (৳)</label>
                           <input 
                             type="number" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.discountAmount || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, discountAmount: Number(e.target.value) })}
                           />
@@ -1948,38 +1940,38 @@ export const StorefrontManagement = () => {
                   {bannerSection === 'contact' && (
                     <div className="space-y-4">
                       <h2 className="text-h3 font-black border-b border-base-800 pb-2">Contact Details & Welcome Popup</h2>
-                      <div className="sf-form-grid">
-                        <div className="sf-form-group">
-                          <label className="sf-label">Contact Phone</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Contact Phone</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.contactPhone || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, contactPhone: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">Contact Email</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Contact Email</label>
                           <input 
                             type="email" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.contactEmail || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, contactEmail: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group full-width">
-                          <label className="sf-label">Flagship Address</label>
+                        <div className="flex flex-col gap-2 md:col-span-2">
+                          <label className="text-sm font-medium text-foreground">Flagship Address</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.contactAddress || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, contactAddress: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">Enable Welcome Popup?</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Enable Welcome Popup?</label>
                           <select 
-                            className="sf-select"
+                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             value={homeSettings.welcome_popup_enabled || 'true'}
                             onChange={(e) => setHomeSettings({ ...homeSettings, welcome_popup_enabled: e.target.value })}
                           >
@@ -1987,37 +1979,37 @@ export const StorefrontManagement = () => {
                             <option value="false">No</option>
                           </select>
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">Welcome Popup Title</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Welcome Popup Title</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.welcome_title || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, welcome_title: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group full-width">
-                          <label className="sf-label">Welcome Popup Description Text</label>
+                        <div className="flex flex-col gap-2 md:col-span-2">
+                          <label className="text-sm font-medium text-foreground">Welcome Popup Description Text</label>
                           <textarea 
-                            className="sf-textarea" 
+                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.welcome_text || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, welcome_text: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">Welcome Popup Button Text</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Welcome Popup Button Text</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.welcome_button_text || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, welcome_button_text: e.target.value })}
                           />
                         </div>
-                        <div className="sf-form-group">
-                          <label className="sf-label">Welcome Popup Link URL</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium text-foreground">Welcome Popup Link URL</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.welcome_link || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, welcome_link: e.target.value })}
                           />
@@ -2061,16 +2053,16 @@ export const StorefrontManagement = () => {
                           {contactSaving ? 'Saving...' : '💾 Save Contact Info'}
                         </button>
                       </div>
-                      <div className="sf-form-grid">
-                        <div className="sf-form-group"><label className="sf-label">Phone Number</label><input type="text" className="sf-input" value={contactInfo.phone || ''} onChange={e => setContactInfo({ ...contactInfo, phone: e.target.value })} placeholder="01827-406756" /></div>
-                        <div className="sf-form-group"><label className="sf-label">WhatsApp Number (digits only)</label><input type="text" className="sf-input" value={contactInfo.whatsapp || ''} onChange={e => setContactInfo({ ...contactInfo, whatsapp: e.target.value })} placeholder="01827406756" /></div>
-                        <div className="sf-form-group full-width"><label className="sf-label">Email Address</label><input type="email" className="sf-input" value={contactInfo.email || ''} onChange={e => setContactInfo({ ...contactInfo, email: e.target.value })} /></div>
-                        <div className="sf-form-group full-width"><label className="sf-label">Full Address</label><input type="text" className="sf-input" value={contactInfo.address || ''} onChange={e => setContactInfo({ ...contactInfo, address: e.target.value })} /></div>
-                        <div className="sf-form-group full-width"><label className="sf-label">Facebook URL</label><input type="url" className="sf-input" value={contactInfo.facebook_url || ''} onChange={e => setContactInfo({ ...contactInfo, facebook_url: e.target.value })} /></div>
-                        <div className="sf-form-group full-width"><label className="sf-label">Instagram URL</label><input type="url" className="sf-input" value={contactInfo.instagram_url || ''} onChange={e => setContactInfo({ ...contactInfo, instagram_url: e.target.value })} /></div>
-                        <div className="sf-form-group full-width"><label className="sf-label">Google Maps URL</label><input type="url" className="sf-input" value={contactInfo.google_maps_url || ''} onChange={e => setContactInfo({ ...contactInfo, google_maps_url: e.target.value })} /></div>
-                        <div className="sf-form-group"><label className="sf-label">Flagship Store Name</label><input type="text" className="sf-input" value={contactInfo.flagship_name || ''} onChange={e => setContactInfo({ ...contactInfo, flagship_name: e.target.value })} /></div>
-                        <div className="sf-form-group"><label className="sf-label">Flagship Store Address</label><input type="text" className="sf-input" value={contactInfo.flagship_address || ''} onChange={e => setContactInfo({ ...contactInfo, flagship_address: e.target.value })} /></div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="flex flex-col gap-2"><label className="text-sm font-medium text-foreground">Phone Number</label><input type="text" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" value={contactInfo.phone || ''} onChange={e => setContactInfo({ ...contactInfo, phone: e.target.value })} placeholder="01827-406756" /></div>
+                        <div className="flex flex-col gap-2"><label className="text-sm font-medium text-foreground">WhatsApp Number (digits only)</label><input type="text" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" value={contactInfo.whatsapp || ''} onChange={e => setContactInfo({ ...contactInfo, whatsapp: e.target.value })} placeholder="01827406756" /></div>
+                        <div className="flex flex-col gap-2 md:col-span-2"><label className="text-sm font-medium text-foreground">Email Address</label><input type="email" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" value={contactInfo.email || ''} onChange={e => setContactInfo({ ...contactInfo, email: e.target.value })} /></div>
+                        <div className="flex flex-col gap-2 md:col-span-2"><label className="text-sm font-medium text-foreground">Full Address</label><input type="text" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" value={contactInfo.address || ''} onChange={e => setContactInfo({ ...contactInfo, address: e.target.value })} /></div>
+                        <div className="flex flex-col gap-2 md:col-span-2"><label className="text-sm font-medium text-foreground">Facebook URL</label><input type="url" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" value={contactInfo.facebook_url || ''} onChange={e => setContactInfo({ ...contactInfo, facebook_url: e.target.value })} /></div>
+                        <div className="flex flex-col gap-2 md:col-span-2"><label className="text-sm font-medium text-foreground">Instagram URL</label><input type="url" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" value={contactInfo.instagram_url || ''} onChange={e => setContactInfo({ ...contactInfo, instagram_url: e.target.value })} /></div>
+                        <div className="flex flex-col gap-2 md:col-span-2"><label className="text-sm font-medium text-foreground">Google Maps URL</label><input type="url" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" value={contactInfo.google_maps_url || ''} onChange={e => setContactInfo({ ...contactInfo, google_maps_url: e.target.value })} /></div>
+                        <div className="flex flex-col gap-2"><label className="text-sm font-medium text-foreground">Flagship Store Name</label><input type="text" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" value={contactInfo.flagship_name || ''} onChange={e => setContactInfo({ ...contactInfo, flagship_name: e.target.value })} /></div>
+                        <div className="flex flex-col gap-2"><label className="text-sm font-medium text-foreground">Flagship Store Address</label><input type="text" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" value={contactInfo.flagship_address || ''} onChange={e => setContactInfo({ ...contactInfo, flagship_address: e.target.value })} /></div>
                       </div>
                     </div>
                   )}
@@ -2084,7 +2076,7 @@ export const StorefrontManagement = () => {
                           <button
                             type="button"
                             onClick={() => setFaqItems([...faqItems, { id: Date.now(), q: 'New Question?', a: 'Answer here.' }])}
-                            className="action-btn-green"
+                            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
                             style={{ padding: '8px 16px', fontSize: '12px', borderRadius: '6px', height: 'auto', boxShadow: 'none' }}
                           >+ Add FAQ</button>
                           <button
@@ -2118,13 +2110,13 @@ export const StorefrontManagement = () => {
                               <span style={{ fontWeight: 700, fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>FAQ #{idx + 1}</span>
                               <button type="button" onClick={() => setFaqItems(faqItems.filter((_, i) => i !== idx))} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 10px', fontSize: '12px', cursor: 'pointer' }}>Delete</button>
                             </div>
-                            <div className="sf-form-group full-width" style={{ marginBottom: '10px' }}>
-                              <label className="sf-label">Question</label>
-                              <input type="text" className="sf-input" value={item.q} onChange={e => setFaqItems(faqItems.map((f, i) => i === idx ? { ...f, q: e.target.value } : f))} />
+                            <div className="flex flex-col gap-2 md:col-span-2" style={{ marginBottom: '10px' }}>
+                              <label className="text-sm font-medium text-foreground">Question</label>
+                              <input type="text" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" value={item.q} onChange={e => setFaqItems(faqItems.map((f, i) => i === idx ? { ...f, q: e.target.value } : f))} />
                             </div>
-                            <div className="sf-form-group full-width">
-                              <label className="sf-label">Answer</label>
-                              <textarea className="sf-textarea" rows={3} value={item.a} onChange={e => setFaqItems(faqItems.map((f, i) => i === idx ? { ...f, a: e.target.value } : f))} />
+                            <div className="flex flex-col gap-2 md:col-span-2">
+                              <label className="text-sm font-medium text-foreground">Answer</label>
+                              <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" rows={3} value={item.a} onChange={e => setFaqItems(faqItems.map((f, i) => i === idx ? { ...f, a: e.target.value } : f))} />
                             </div>
                           </div>
                         ))}
@@ -2141,7 +2133,7 @@ export const StorefrontManagement = () => {
                           <button
                             type="button"
                             onClick={() => setReturnPolicySections([...returnPolicySections, { id: Date.now(), title: 'New Section', text: 'Section content here.' }])}
-                            className="action-btn-green"
+                            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
                             style={{ padding: '8px 16px', fontSize: '12px', borderRadius: '6px', height: 'auto', boxShadow: 'none' }}
                           >+ Add Section</button>
                           <button
@@ -2175,13 +2167,13 @@ export const StorefrontManagement = () => {
                               <span style={{ fontWeight: 700, fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Section {idx + 1}</span>
                               <button type="button" onClick={() => setReturnPolicySections(returnPolicySections.filter((_, i) => i !== idx))} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 10px', fontSize: '12px', cursor: 'pointer' }}>Delete</button>
                             </div>
-                            <div className="sf-form-group full-width" style={{ marginBottom: '10px' }}>
-                              <label className="sf-label">Section Title</label>
-                              <input type="text" className="sf-input" value={sec.title} onChange={e => setReturnPolicySections(returnPolicySections.map((s, i) => i === idx ? { ...s, title: e.target.value } : s))} />
+                            <div className="flex flex-col gap-2 md:col-span-2" style={{ marginBottom: '10px' }}>
+                              <label className="text-sm font-medium text-foreground">Section Title</label>
+                              <input type="text" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" value={sec.title} onChange={e => setReturnPolicySections(returnPolicySections.map((s, i) => i === idx ? { ...s, title: e.target.value } : s))} />
                             </div>
-                            <div className="sf-form-group full-width">
-                              <label className="sf-label">Section Content (use • for bullet points)</label>
-                              <textarea className="sf-textarea" rows={5} value={sec.text} onChange={e => setReturnPolicySections(returnPolicySections.map((s, i) => i === idx ? { ...s, text: e.target.value } : s))} />
+                            <div className="flex flex-col gap-2 md:col-span-2">
+                              <label className="text-sm font-medium text-foreground">Section Content (use • for bullet points)</label>
+                              <textarea className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" rows={5} value={sec.text} onChange={e => setReturnPolicySections(returnPolicySections.map((s, i) => i === idx ? { ...s, text: e.target.value } : s))} />
                             </div>
                           </div>
                         ))}
@@ -2193,42 +2185,42 @@ export const StorefrontManagement = () => {
                   {bannerSection === 'trust' && (
                     <div className="space-y-4">
                       <h2 className="text-h3 font-black border-b border-base-800 pb-2">Checkout Trust Badges</h2>
-                      <div className="sf-form-grid">
-                        <div className="sf-form-group full-width">
-                          <label className="sf-label">Trust Badge 1</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="flex flex-col gap-2 md:col-span-2">
+                          <label className="text-sm font-medium text-foreground">Trust Badge 1</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.trustBadge1 || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, trustBadge1: e.target.value })}
                             placeholder="e.g. Cash on Delivery Available"
                           />
                         </div>
-                        <div className="sf-form-group full-width">
-                          <label className="sf-label">Trust Badge 2</label>
+                        <div className="flex flex-col gap-2 md:col-span-2">
+                          <label className="text-sm font-medium text-foreground">Trust Badge 2</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.trustBadge2 || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, trustBadge2: e.target.value })}
                             placeholder="e.g. Check in front of Delivery Man"
                           />
                         </div>
-                        <div className="sf-form-group full-width">
-                          <label className="sf-label">Trust Badge 3</label>
+                        <div className="flex flex-col gap-2 md:col-span-2">
+                          <label className="text-sm font-medium text-foreground">Trust Badge 3</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.trustBadge3 || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, trustBadge3: e.target.value })}
                             placeholder="e.g. No Return after Delivery Man Leaves"
                           />
                         </div>
-                        <div className="sf-form-group full-width">
-                          <label className="sf-label">Trust Badge 4</label>
+                        <div className="flex flex-col gap-2 md:col-span-2">
+                          <label className="text-sm font-medium text-foreground">Trust Badge 4</label>
                           <input 
                             type="text" 
-                            className="sf-input" 
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                             value={homeSettings.trustBadge4 || ''}
                             onChange={(e) => setHomeSettings({ ...homeSettings, trustBadge4: e.target.value })}
                             placeholder="e.g. Exchange Available (Conditions Apply)"
@@ -2239,8 +2231,8 @@ export const StorefrontManagement = () => {
                   )}
 
                   {/* Actions */}
-                  <div className="sf-form-actions">
-                    <Button variant="primary" type="submit" disabled={saveLoading} className="action-btn-green">
+                  <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-border">
+                    <Button variant="primary" type="submit" disabled={saveLoading} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
                       {saveLoading ? <Loader2 size={16} className="spin" /> : <Save size={16} />} Save Changes
                     </Button>
                   </div>
@@ -2262,7 +2254,7 @@ export const StorefrontManagement = () => {
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={addNavItem}
-                    className="action-btn-green"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
                     style={{ padding: '8px 16px', fontSize: '12px', borderRadius: '6px', height: 'auto', boxShadow: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
                     <Plus size={13} /> Add Item
@@ -2430,7 +2422,7 @@ export const StorefrontManagement = () => {
                               <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', minWidth: '16px' }}>↳</span>
                               <input
                                 type="text"
-                                className="sf-input"
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                 placeholder="Sub-item label"
                                 value={sub.label}
                                 onChange={(e) => updateSubItem(idx, si, 'label', e.target.value)}
@@ -2438,7 +2430,7 @@ export const StorefrontManagement = () => {
                               />
                               <input
                                 type="text"
-                                className="sf-input"
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                 placeholder="/shop?category=men&subcategory=..."
                                 value={sub.url}
                                 onChange={(e) => updateSubItem(idx, si, 'url', e.target.value)}
@@ -2505,19 +2497,19 @@ export const StorefrontManagement = () => {
           </div>
 
           <form onSubmit={saveProductSubmit} className="space-y-6">
-            <div className="sf-form-grid">
-              <div className="sf-form-group">
-                <label className="sf-label">Product Name</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground">Product Name</label>
                 <input 
                   type="text" 
-                  className="sf-input" 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                   value={prodForm.name}
                   onChange={handleProdNameChange}
                   required 
                 />
               </div>
 
-              <div className="sf-form-group">
+              <div className="flex flex-col gap-2">
                 <label className="sf-label flex justify-between items-center">
                   <span>URL Slug</span>
                   <span className="text-[10px] text-brand flex items-center gap-1 cursor-pointer" onClick={() => setProdForm({ ...prodForm, slug: generateSlug(prodForm.name) })}>
@@ -2526,17 +2518,17 @@ export const StorefrontManagement = () => {
                 </label>
                 <input 
                   type="text" 
-                  className="sf-input" 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                   value={prodForm.slug}
                   onChange={(e) => setProdForm({ ...prodForm, slug: generateSlug(e.target.value) })}
                   required 
                 />
               </div>
 
-              <div className="sf-form-group">
-                <label className="sf-label">Category</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground">Category</label>
                 <select 
-                  className="sf-select" 
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                   value={prodForm.category}
                   onChange={(e) => setProdForm({ ...prodForm, category: e.target.value })}
                   required
@@ -2547,10 +2539,10 @@ export const StorefrontManagement = () => {
                 </select>
               </div>
 
-              <div className="sf-form-group">
-                <label className="sf-label">Link to Inventory Item (Stock Sync)</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground">Link to Inventory Item (Stock Sync)</label>
                 <select 
-                  className="sf-select" 
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                   value={prodForm.inventory_id || ''}
                   onChange={(e) => setProdForm({ ...prodForm, inventory_id: e.target.value || '' })}
                 >
@@ -2582,33 +2574,33 @@ export const StorefrontManagement = () => {
                 </div>
               </div>
 
-              <div className="sf-form-group">
-                <label className="sf-label">Badge Tag (e.g. Bestseller, New, Drop)</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground">Badge Tag (e.g. Bestseller, New, Drop)</label>
                 <input 
                   type="text" 
-                  className="sf-input" 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                   placeholder="Leave empty for none"
                   value={prodForm.badge}
                   onChange={(e) => setProdForm({ ...prodForm, badge: e.target.value })}
                 />
               </div>
 
-              <div className="sf-form-group">
-                <label className="sf-label">Selling Price (BDT)</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground">Selling Price (BDT)</label>
                 <input 
                   type="number" 
-                  className="sf-input" 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                   value={prodForm.price}
                   onChange={(e) => setProdForm({ ...prodForm, price: e.target.value })}
                   required 
                 />
               </div>
 
-              <div className="sf-form-group">
-                <label className="sf-label">Original/Strike Price (BDT)</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground">Original/Strike Price (BDT)</label>
                 <input 
                   type="number" 
-                  className="sf-input" 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                   placeholder="Leave empty for no strike"
                   value={prodForm.original_price}
                   onChange={(e) => setProdForm({ ...prodForm, original_price: e.target.value })}
@@ -2634,44 +2626,44 @@ export const StorefrontManagement = () => {
                 onChange={(guide) => setProdForm({ ...prodForm, size_guide: guide })}
               />
 
-              <div className="sf-form-group">
-                <label className="sf-label">Available Sizes (comma separated)</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground">Available Sizes (comma separated)</label>
                 <input 
                   type="text" 
-                  className="sf-input" 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                   placeholder="e.g. S, M, L, XL"
                   value={prodForm.sizes}
                   onChange={(e) => setProdForm({ ...prodForm, sizes: e.target.value })}
                 />
               </div>
 
-              <div className="sf-form-group">
-                <label className="sf-label">Available Colors (comma separated)</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground">Available Colors (comma separated)</label>
                 <input 
                   type="text" 
-                  className="sf-input" 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                   placeholder="e.g. black, rust, grey"
                   value={prodForm.colors}
                   onChange={(e) => setProdForm({ ...prodForm, colors: e.target.value })}
                 />
               </div>
 
-              <div className="sf-form-group">
-                <label className="sf-label">Product Features (comma separated)</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground">Product Features (comma separated)</label>
                 <input 
                   type="text" 
-                  className="sf-input" 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                   placeholder="e.g. 100% Premium Cotton, Oversized Fit"
                   value={prodForm.features || ''}
                   onChange={(e) => setProdForm({ ...prodForm, features: e.target.value })}
                 />
               </div>
 
-              <div className="sf-form-group">
-                <label className="sf-label">Material / Fabric</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground">Material / Fabric</label>
                 <input 
                   type="text" 
-                  className="sf-input" 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                   placeholder="e.g. Cotton 100%, Heavyweight Fleece"
                   value={prodForm.material || ''}
                   onChange={(e) => setProdForm({ ...prodForm, material: e.target.value })}
@@ -2704,7 +2696,7 @@ export const StorefrontManagement = () => {
                 </div>
 
                 {(!prodForm.variants || prodForm.variants.length === 0) ? (
-                  <div className="text-center py-6 border border-dashed border-base-300/20 rounded-lg">
+                  <div className="rounded-2xl border-2 border-dashed border-border bg-muted/30 p-8 text-center">
                     <p className="text-xs text-surface-muted">No variations added yet. Click Auto-Generate or Add Row to start.</p>
                   </div>
                 ) : (
@@ -2775,10 +2767,10 @@ export const StorefrontManagement = () => {
                 )}
               </div>
 
-              <div className="sf-form-group full-width">
-                <label className="sf-label">Short Description</label>
+              <div className="flex flex-col gap-2 md:col-span-2">
+                <label className="text-sm font-medium text-foreground">Short Description</label>
                 <textarea 
-                  className="sf-textarea" 
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                   placeholder="Describe this product briefly..."
                   value={prodForm.description}
                   onChange={(e) => setProdForm({ ...prodForm, description: e.target.value })}
@@ -2786,10 +2778,10 @@ export const StorefrontManagement = () => {
                 />
               </div>
 
-              <div className="sf-form-group full-width">
-                <label className="sf-label">Long Details Description</label>
+              <div className="flex flex-col gap-2 md:col-span-2">
+                <label className="text-sm font-medium text-foreground">Long Details Description</label>
                 <textarea 
-                  className="sf-textarea" 
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                   placeholder="Provide detailed composition, sizing details etc..."
                   value={prodForm.long_description}
                   onChange={(e) => setProdForm({ ...prodForm, long_description: e.target.value })}
@@ -2797,25 +2789,21 @@ export const StorefrontManagement = () => {
                 />
               </div>
 
-              <div className="sf-form-group">
-                <label className="sf-label">Stock Status</label>
-                <div className="sf-toggle-group">
-                  <label className="sf-switch">
-                    <input 
-                      type="checkbox" 
-                      checked={prodForm.in_stock}
-                      onChange={(e) => setProdForm({ ...prodForm, in_stock: e.target.checked })}
-                    />
-                    <span className="sf-slider"></span>
-                  </label>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground">Stock Status</label>
+                <div className="flex items-center gap-3 mt-2">
+                  <Switch 
+                    checked={prodForm.in_stock}
+                    onCheckedChange={(checked) => setProdForm({ ...prodForm, in_stock: checked })}
+                  />
                   <span className="text-sm font-semibold">{prodForm.in_stock ? 'In Stock' : 'Out of Stock'}</span>
                 </div>
               </div>
             </div>
 
-            <div className="sf-form-actions">
+            <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-border">
               <Button variant="ghost" type="button" onClick={() => setIsProductModalOpen(false)}>Cancel</Button>
-              <Button variant="primary" type="submit" disabled={saveLoading} className="action-btn-green">
+              <Button variant="primary" type="submit" disabled={saveLoading} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
                 {saveLoading ? <Loader2 size={16} className="spin" /> : <Save size={16} />} Save Product
               </Button>
             </div>
@@ -2834,19 +2822,19 @@ export const StorefrontManagement = () => {
           </div>
 
           <form onSubmit={saveCategorySubmit} className="space-y-6">
-            <div className="sf-form-grid">
-              <div className="sf-form-group">
-                <label className="sf-label">Category Name</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground">Category Name</label>
                 <input 
                   type="text" 
-                  className="sf-input" 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                   value={catForm.name}
                   onChange={handleCatNameChange}
                   required 
                 />
               </div>
 
-              <div className="sf-form-group">
+              <div className="flex flex-col gap-2">
                 <label className="sf-label flex justify-between items-center">
                   <span>URL Slug</span>
                   <span className="text-[10px] text-brand flex items-center gap-1 cursor-pointer" onClick={() => setCatForm({ ...catForm, slug: generateSlug(catForm.name) })}>
@@ -2855,7 +2843,7 @@ export const StorefrontManagement = () => {
                 </label>
                 <input 
                   type="text" 
-                  className="sf-input" 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                   value={catForm.slug}
                   onChange={(e) => setCatForm({ ...catForm, slug: generateSlug(e.target.value) })}
                   required 
@@ -2869,10 +2857,10 @@ export const StorefrontManagement = () => {
                 placeholder="e.g. /images/cat-hoodies.webp"
               />
 
-              <div className="sf-form-group full-width">
-                <label className="sf-label">Description</label>
+              <div className="flex flex-col gap-2 md:col-span-2">
+                <label className="text-sm font-medium text-foreground">Description</label>
                 <textarea 
-                  className="sf-textarea" 
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
                   value={catForm.description}
                   onChange={(e) => setCatForm({ ...catForm, description: e.target.value })}
                   required
@@ -2880,9 +2868,9 @@ export const StorefrontManagement = () => {
               </div>
             </div>
 
-            <div className="sf-form-actions">
+            <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-border">
               <Button variant="ghost" type="button" onClick={() => setIsCategoryModalOpen(false)}>Cancel</Button>
-              <Button variant="primary" type="submit" disabled={saveLoading} className="action-btn-green">
+              <Button variant="primary" type="submit" disabled={saveLoading} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
                 {saveLoading ? <Loader2 size={16} className="spin" /> : <Save size={16} />} Save Category
               </Button>
             </div>

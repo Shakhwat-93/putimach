@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
+import './OrdersBoard.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useOrders } from '../context/OrderContext';
@@ -18,8 +19,7 @@ import { DateRangePicker } from '../components/DateRangePicker';
 import { OrderRow } from '../components/OrderRow';
 import { OrderEditModal } from '../components/OrderEditModal';
 import BulkOrderCreator from '../components/BulkOrderCreator';
-import './OrdersBoard.css';
-import '../components/BulkActions.css';
+
 import api from '../lib/api';
 import { getProductCheckpoints } from '../utils/productCatalog';
 import { useRouteOrderReadState } from '../hooks/useRouteOrderReadState';
@@ -714,490 +714,370 @@ export const OrdersBoard = () => {
 
 
   return (
-    <div className="orders-management">
+    <div className="space-y-6">
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="orders-header-container"
+        className="flex flex-col md:flex-row md:items-center justify-between gap-4"
       >
-        <div className="page-header orders-header elite-enterprise-header">
-          <div className="header-main-stack">
-            <div className="title-group-elite">
-              <h1 className="premium-title-enterprise">
-                <span className="text-dark">Orders </span>
-                <span className="text-accent-indigo">Management</span>
-              </h1>
-              <p className="premium-subtitle-enterprise">Full control over your order pipeline and customer records.</p>
-            </div>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold font-display">
+            <span className="text-foreground">Orders </span>
+            <span className="text-primary">Management</span>
+          </h1>
+          <p className="text-muted-foreground">Full control over your order pipeline and customer records.</p>
+        </div>
 
-          <div className="header-actions-enterprise">
-            <Button variant="ghost" className="export-btn-light" onClick={() => setIsExportModalOpen(true)}>
-              <Download size={18} /> <span>Export CSV</span>
-            </Button>
-            
-            <Button
-              variant="secondary"
-              className="action-btn-green"
-              onClick={handleAutoDistribute}
-              disabled={distributing}
-            >
-              {distributing ? 'Processing...' : 'AUTO DISTRIBUTE ORDERS'}
-            </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="ghost" onClick={() => setIsExportModalOpen(true)}>
+            <Download size={18} className="mr-2" /> <span>Export CSV</span>
+          </Button>
+          
+          <Button
+            variant="secondary"
+            onClick={handleAutoDistribute}
+            disabled={distributing}
+          >
+            {distributing ? 'Processing...' : 'AUTO DISTRIBUTE'}
+          </Button>
 
-            {hasAnyRole(['Admin', 'Moderator']) && (
-              <>
-                <Button variant="primary" className="action-btn-green" onClick={() => setIsNewOrderModalOpen(true)}>
-                  <Plus size={18} />
-                  <span>New Order</span>
-                </Button>
-              </>
-            )}
-          </div>
+          {hasAnyRole(['Admin', 'Moderator']) && (
+            <Button onClick={() => setIsNewOrderModalOpen(true)}>
+              <Plus size={18} className="mr-2" />
+              <span>New Order</span>
+            </Button>
+          )}
         </div>
       </motion.div>
 
       {/* ── Status Tabs ── */}
-      <div className="scrollable-strip-wrapper">
-        <button className="strip-arrow left" onClick={() => scrollContainer(statusTabsRef, 'left')}>
-          <ChevronLeft size={16} />
-        </button>
-        <div className="status-tabs-bar" ref={statusTabsRef}>
-          {statusTabs.map((tab) => (
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-2 flex-nowrap">
+        {statusTabs.map((tab) => {
+          let colorClass = 'bg-slate-100 text-slate-700'; // default/All
+          if (tab.value === 'Pending Call') colorClass = 'bg-amber-100 text-amber-800';
+          else if (tab.value === 'Final Call Pending') colorClass = 'bg-orange-100 text-orange-800';
+          else if (tab.value === 'Confirmed') colorClass = 'bg-emerald-100 text-emerald-800';
+          else if (tab.value === 'Cancelled') colorClass = 'bg-rose-100 text-rose-800';
+          else if (tab.value === 'Fake Order') colorClass = 'bg-red-100 text-red-800';
+          
+          return (
             <button
               key={tab.value}
-              className={`status-tab ${filters.status === tab.value ? 'active' : ''}`}
+              className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                filters.status === tab.value 
+                  ? 'bg-primary text-primary-foreground' 
+                  : `bg-secondary hover:bg-secondary/80 text-foreground`
+              }`}
               onClick={() => handleFilterChange('status', tab.value)}
             >
-              <span className="status-tab-label">{tab.label}</span>
-              <span className="status-tab-count">{tab.count}</span>
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${colorClass.split(' ')[0].replace('100', '500')}`}></span>
+                <span>{tab.label}</span>
+                <span className="rounded-full bg-secondary px-3 py-1 text-xs font-bold text-muted-foreground">{tab.count}</span>
+              </div>
             </button>
-          ))}
-        </div>
-        <button className="strip-arrow right" onClick={() => scrollContainer(statusTabsRef, 'right')}>
-          <ChevronRight size={16} />
-        </button>
+          )
+        })}
       </div>
       {isLoadingStatusBreakdown && (
-        <div className="status-breakdown-status">Refreshing status-wise order counts...</div>
+        <div className="text-sm text-muted-foreground animate-pulse">Refreshing status-wise order counts...</div>
       )}
 
       {/* ── Unified Filter Bar ── */}
-      <div className="unified-filter-bar">
-        <PremiumSearch
-          value={filters.searchTerm}
-          onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
-          placeholder="Search ID, name or phone..."
-          suggestions={
-            filters.searchTerm ? orders.filter(o => 
-              o.id.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-              o.customer_name?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-              o.phone?.includes(filters.searchTerm)
-            ).slice(0, 5).map(o => ({
-              id: o.id,
-              label: o.customer_name,
-              sub: o.id,
-              type: 'order',
-              original: o
-            })) : []
-          }
-          onSuggestionClick={(item) => {
-            if (item.type === 'order') {
-              handleRowClick(item.original);
+      <div className="rounded-2xl border border-border bg-card p-3 mb-4 flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="flex-1">
+          <PremiumSearch
+            value={filters.searchTerm}
+            onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+            placeholder="Search ID, name or phone..."
+            suggestions={
+              filters.searchTerm ? orders.filter(o => 
+                o.id.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+                o.customer_name?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+                o.phone?.includes(filters.searchTerm)
+              ).slice(0, 5).map(o => ({
+                id: o.id,
+                label: o.customer_name,
+                sub: o.id,
+                type: 'order',
+                original: o
+              })) : []
             }
-          }}
-        />
-
-        <div 
-          className="elite-select-wrapper" 
-          ref={sourceDropdownRef}
-          onClick={() => setSourceDropdownOpen(!sourceDropdownOpen)}
-          style={{ position: 'relative', cursor: 'pointer' }}
-        >
-          <Globe size={16} className="elite-select-icon" />
-          <span className="elite-select-selected-value">
-            {filters.source === 'All' ? 'All Sources' : filters.source}
-          </span>
-          <ChevronDown size={14} className="ml-auto opacity-50" style={{ transform: sourceDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease', flexShrink: 0 }} />
-          
-          <AnimatePresence>
-            {sourceDropdownOpen && (
-              <motion.div 
-                className="premium-select-dropdown"
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                transition={{ duration: 0.15, ease: 'easeOut' }}
-              >
-                <div 
-                  className={`select-dropdown-item ${filters.source === 'All' ? 'active' : ''}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleFilterChange('source', 'All');
-                    setSourceDropdownOpen(false);
-                  }}
-                >
-                  All Sources
-                </div>
-                {SOURCES.map(s => (
-                  <div 
-                    key={s} 
-                    className={`select-dropdown-item ${filters.source === s ? 'active' : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleFilterChange('source', s);
-                      setSourceDropdownOpen(false);
-                    }}
-                  >
-                    {s}
-                  </div>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+            onSuggestionClick={(item) => {
+              if (item.type === 'order') {
+                handleRowClick(item.original);
+              }
+            }}
+          />
         </div>
+
+        <select
+          className="rounded-xl border border-input bg-background px-3 py-2 text-sm"
+          value={filters.source}
+          onChange={(e) => handleFilterChange('source', e.target.value)}
+        >
+          <option value="All">All Sources</option>
+          {SOURCES.map(s => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
 
         <DateRangePicker
           value={filters.dateRange}
           onChange={(range) => handleFilterChange('dateRange', range)}
         />
         {unreadCount > 0 && (
-          <span className="route-unread-count-pill" title="Orders not opened in this route">
+          <span className="rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-bold whitespace-nowrap" title="Orders not opened in this route">
             {unreadCount} unread
           </span>
         )}
       </div>
 
       {/* ── Product Checkpoints (Horizontal Scroll) ── */}
-      <div className="scrollable-strip-wrapper">
-        <button className="strip-arrow left" onClick={() => scrollContainer(checkpointsRef, 'left')}>
-          <ChevronLeft size={16} />
-        </button>
-        <div className="product-checkpoints-strip" ref={checkpointsRef}>
-          {visibleProductBreakdown.map((product) => (
-            <button
-              key={product.id}
-              className={`checkpoint-pill ${filters.productName === (product.id === 'all' ? '' : product.name) ? 'active' : ''}`}
-              style={{
-                '--pill-color': product.color,
-                '--pill-bg': product.id === 'all' ? '#f1f5f9' : `${product.color}10`,
-                '--pill-border': product.id === 'all' ? '#e2e8f0' : `${product.color}25`
-              }}
-              onClick={() => handleFilterChange('productName', product.id === 'all' ? '' : product.name)}
-            >
-              <span className="dot" style={{ backgroundColor: product.color }}></span>
-              <span className="checkpoint-label">{product.name}</span>
-              <span className="checkpoint-count">{product.count}</span>
-            </button>
-          ))}
-        </div>
-        <button className="strip-arrow right" onClick={() => scrollContainer(checkpointsRef, 'right')}>
-          <ChevronRight size={16} />
-        </button>
+      <div className="flex gap-2 overflow-x-auto scrollbar-none pb-2 flex-nowrap items-center">
+        {visibleProductBreakdown.map((product) => (
+          <button
+            key={product.id}
+            className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium border transition-colors flex items-center gap-2 ${
+              filters.productName === (product.id === 'all' ? '' : product.name) 
+                ? 'border-primary bg-primary/5 text-primary' 
+                : 'border-border bg-card hover:bg-secondary text-foreground'
+            }`}
+            onClick={() => handleFilterChange('productName', product.id === 'all' ? '' : product.name)}
+          >
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: product.color }}></span>
+            <span>{product.name}</span>
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-bold text-muted-foreground">{product.count}</span>
+          </button>
+        ))}
       </div>
       {isLoadingProductBreakdown && (
-        <div className="product-breakdown-status">Refreshing product-wise order counts...</div>
+        <div className="text-sm text-muted-foreground animate-pulse">Refreshing product-wise order counts...</div>
       )}
 
-      <Card className="table-card liquid-glass" noPadding>
-        <div className="orders-table-wrapper desktop-only">
-          <table className="management-table premium-table">
-            <thead>
+      {/* Table (desktop) */}
+      <div className="hidden md:block rounded-2xl border border-border bg-card overflow-hidden shadow-sm animate-slide-up">
+        <table className="w-full text-sm text-left">
+          <thead className="bg-secondary/40 text-muted-foreground font-semibold border-b border-border text-[11px] uppercase tracking-wider">
+            <tr>
+              <th className="px-3 py-3 w-8">
+                <input 
+                  type="checkbox" 
+                  className="rounded border-input text-primary focus:ring-primary/20 h-4 w-4 cursor-pointer"
+                  checked={pagedOrders.length > 0 && pagedOrders.every(order => selectedOrderIds.includes(order.id))}
+                  onChange={handleSelectAll}
+                />
+              </th>
+              <th className="px-3 py-3">Caller / ID</th>
+              <th className="px-3 py-3">Date</th>
+              <th className="px-3 py-3">Customer</th>
+              <th className="px-3 py-3">Product</th>
+              <th className="px-3 py-3">Total</th>
+              <th className="px-3 py-3">Status</th>
+              <th className="px-3 py-3">Response</th>
+              <th className="px-3 py-3 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            <AnimatePresence mode="popLayout">
+              {Array.isArray(pagedOrders) && pagedOrders.map(order => (
+                <OrderRow
+                  key={order.id}
+                  order={order}
+                  onDetails={handleRowClick}
+                  onStatusChange={updateOrderStatus}
+                  onEdit={handleOpenEditModal}
+                  isSelected={selectedOrderIds.includes(order.id)}
+                  onSelect={handleSelectOrder}
+                  fraudFlag={fraudFlags[order.id]}
+                  automationFlag={automationFlags[order.id]}
+                  isUnread={isOrderUnread(order)}
+                  duplicateWarning={duplicateWarnings[order.id]}
+                />
+              ))}
+            </AnimatePresence>
+            {(!pagedOrders || pagedOrders.length === 0) && (
               <tr>
-                <th className="checkbox-col">
-                  <input 
-                    type="checkbox" 
-                    className="premium-checkbox" 
-                    checked={pagedOrders.length > 0 && pagedOrders.every(order => selectedOrderIds.includes(order.id))}
-                    onChange={handleSelectAll}
-                  />
-                </th>
-                <th className="id-col">Caller</th>
-                <th className="date-col">Timestamp</th>
-                <th className="customer-col">Customer</th>
-                <th className="product-col">Product</th>
-                <th className="amount-col">Total</th>
-                <th className="shipping-col">Delivery</th>
-                <th className="items-col">Items</th>
-                <th className="status-col">Fulfilment</th>
-                <th className="response-timer-col" title="Time since order arrived vs. first call response">Response</th>
-                <th className="actions-col">Action</th>
+                <td colSpan="9" className="p-8 text-center text-muted-foreground">
+                  {loading ? 'Loading orders...' : 'No orders found matching your filters.'}
+                </td>
               </tr>
-            </thead>
-            <tbody className="orders-table-body">
-              <AnimatePresence mode="popLayout">
-                {Array.isArray(pagedOrders) && pagedOrders.map(order => (
-                  <OrderRow
-                    key={order.id}
-                    order={order}
-                    onDetails={handleRowClick}
-                    onStatusChange={updateOrderStatus}
-                    onEdit={handleOpenEditModal}
-                    isSelected={selectedOrderIds.includes(order.id)}
-                    onSelect={handleSelectOrder}
-                    fraudFlag={fraudFlags[order.id]}
-                    automationFlag={automationFlags[order.id]}
-                    isUnread={isOrderUnread(order)}
-                    duplicateWarning={duplicateWarnings[order.id]}
-                  />
-                ))}
-              </AnimatePresence>
-              {(!pagedOrders || pagedOrders.length === 0) && (
-                <tr>
-                  <td colSpan="10" className="empty-state-cell">
-                    {loading ? 'Loading orders...' : 'No orders found matching your filters.'}
-                  </td>
-                </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3 animate-slide-up">
+        {Array.isArray(pagedOrders) && pagedOrders.map(order => (
+          <div
+            key={order.id}
+            className={`rounded-2xl border border-border bg-card p-4 shadow-sm relative ${isOrderUnread(order) ? 'ring-2 ring-primary/20' : ''}`}
+            onClick={() => handleRowClick(order)}
+          >
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  {isOrderUnread(order) && <span className="w-2 h-2 rounded-full bg-primary" />}
+                  <span className="text-xs font-medium text-muted-foreground">#{String(order.id).replace('ORD-', '').replace('STB-', '').replace('MGB-', '').slice(0, 8)}</span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {order.created_at ? new Date(order.created_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) : 'N/A'}
+                </div>
+              </div>
+              <Badge variant={getStatusBadgeVariant(order.status)}>
+                {order.status}
+              </Badge>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <h3 className="font-semibold text-foreground text-lg">{order.customer_name}</h3>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                  <Phone size={14} />
+                  <span>{order.phone}</span>
+                  <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
+                    <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground" onClick={(e) => copyPhoneNumber(e, order.phone)}><Copy size={14} /></button>
+                    <a href={order.phone ? `tel:${order.phone}` : undefined} className="p-1.5 rounded-md hover:bg-secondary text-primary" onClick={(e) => e.stopPropagation()}><Phone size={14} /></a>
+                    {getWhatsAppLink(order.phone) && (
+                      <a href={getWhatsAppLink(order.phone)} target="_blank" rel="noreferrer" className="p-1.5 rounded-md hover:bg-green-50 text-green-600" onClick={(e) => e.stopPropagation()}><MessageCircle size={14} /></a>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 p-3 bg-secondary/30 rounded-xl">
+                <div>
+                  <span className="text-xs text-muted-foreground block mb-1">Product</span>
+                  <span className="text-sm font-medium text-foreground block">{order.product_name}</span>
+                  <span className="text-xs text-muted-foreground">{order.size || 'No Size'}</span>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground block mb-1">Total</span>
+                  <span className="text-sm font-bold text-foreground flex items-center gap-1">
+                    <CurrencyIcon size={12} />
+                    {Number(order.amount || 0).toLocaleString()}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{order.shipping_zone || 'Outside Dhaka'}</span>
+                </div>
+              </div>
+              
+              {duplicateWarnings[order.id] && (
+                <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 p-2 rounded-lg">
+                  <AlertTriangle size={14} />
+                  <span>Duplicate: {duplicateWarnings[order.id].label}</span>
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile Card View (Elite Upgrade) */}
-        <div className="orders-mobile-list mobile-only">
-          {Array.isArray(pagedOrders) && pagedOrders.map(order => (
-            <div
-              key={order.id}
-              className={`order-mobile-card elite-card ${isOrderUnread(order) ? 'route-unread-card' : ''}`}
-              onClick={() => handleRowClick(order)}
-            >
-              <div className="card-header-elite">
-                <div className="id-group">
-                  <div className="route-read-card-header">
-                    {isOrderUnread(order) && <span className="route-unread-dot" aria-label="Unread order" />}
-                    {order.first_caller_name ? (
-                      <div className="first-caller-cell">
-                        <span className="first-caller-avatar">
-                          {order.first_caller_name.charAt(0).toUpperCase()}
-                        </span>
-                        <div className="first-caller-info">
-                          <span className="first-caller-name">{order.first_caller_name}</span>
-                          <span className="first-caller-id-sub">#{String(order.id).replace('ORD-', '').replace('STB-', '').replace('MGB-', '').slice(0, 8)}</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="first-caller-cell no-caller">
-                        <span className="first-caller-avatar no-caller-avatar">—</span>
-                        <div className="first-caller-info">
-                          <span className="first-caller-name no-caller-text">Not called</span>
-                          <span className="first-caller-id-sub">#{String(order.id).replace('ORD-', '').replace('STB-', '').replace('MGB-', '').slice(0, 8)}</span>
-                        </div>
-                      </div>
-                    )}
-                    {isOrderUnread(order) && <span className="route-unread-chip">New</span>}
-                  </div>
-                  <div className="card-flags">
-                    {duplicateWarnings[order.id] && (
-                      <AlertTriangle size={14} className="flag-icon duplicate" />
-                    )}
-                    {fraudFlags[order.id] && (
-                      <AlertTriangle size={14} className="flag-icon fraud" />
-                    )}
-                    {automationFlags[order.id] && (
-                      <Clock size={14} className="flag-icon auto" />
-                    )}
-                  </div>
-                </div>
-                <Badge variant={getStatusBadgeVariant(order.status)}>
-                  {order.status}
-                </Badge>
-              </div>
-
-              <div className="card-body-elite">
-                <div className="customer-primary-box">
-                  <h3 className="customer-name-large">{order.customer_name}</h3>
-                  <div className="phone-row">
-                    <Phone size={12} />
-                    <span>{order.phone}</span>
-                    <div className="phone-quick-actions" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        className="phone-quick-btn"
-                        title="Copy phone"
-                        onClick={(e) => copyPhoneNumber(e, order.phone)}
-                      >
-                        <Copy size={12} />
-                      </button>
-                      <a
-                        href={order.phone ? `tel:${order.phone}` : undefined}
-                        className="phone-quick-btn"
-                        title="Call customer"
-                        onClick={(e) => e.stopPropagation()}
-                        aria-disabled={!order.phone}
-                      >
-                        <Phone size={12} />
-                      </a>
-                      <a
-                        href={getWhatsAppLink(order.phone) || undefined}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="phone-quick-btn whatsapp"
-                        title="Open WhatsApp"
-                        onClick={(e) => e.stopPropagation()}
-                        aria-disabled={!getWhatsAppLink(order.phone)}
-                      >
-                        <MessageCircle size={12} />
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="details-grid-elite">
-                  <div className="detail-box-elite">
-                    <span className="detail-label">Product</span>
-                    <span className="detail-value product">{order.product_name}</span>
-                    <span className="detail-subvalue">{order.size || 'No Size'}</span>
-                    {order.source && (
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', marginTop: '3px',
-                        padding: '2px 8px', borderRadius: '999px', fontSize: '10.5px',
-                        fontWeight: 700, letterSpacing: '0.03em', whiteSpace: 'nowrap',
-                        border: '1px solid',
-                        ...(
-                          String(order.source).toLowerCase().includes('facebook') || String(order.source).toLowerCase() === 'fb'
-                            ? { background: 'rgba(24,119,242,0.1)', color: '#1877f2', borderColor: 'rgba(24,119,242,0.22)' }
-                          : String(order.source).toLowerCase().includes('tiktok')
-                            ? { background: 'rgba(0,0,0,0.07)', color: '#1a1a1a', borderColor: 'rgba(0,0,0,0.14)' }
-                          : String(order.source).toLowerCase().includes('instagram')
-                            ? { background: 'rgba(225,48,108,0.1)', color: '#e1306c', borderColor: 'rgba(225,48,108,0.22)' }
-                          : String(order.source).toLowerCase().includes('web')
-                            ? { background: 'rgba(13, 148, 136,0.1)', color: '#0d9488', borderColor: 'rgba(13, 148, 136,0.22)' }
-                          : String(order.source).toLowerCase().includes('direct')
-                            ? { background: 'rgba(16,185,129,0.1)', color: '#059669', borderColor: 'rgba(16,185,129,0.22)' }
-                          : { background: 'rgba(100,116,139,0.08)', color: '#64748b', borderColor: 'rgba(100,116,139,0.18)' }
-                        )
-                      }}>
-                        {order.source}
-                      </span>
-                    )}
-                  </div>
-                  <div className="detail-box-elite">
-                    <span className="detail-label">Logistics</span>
-                    <span className="detail-value">
-                      <CurrencyIcon size={12} className="currency-icon-elite" />
-                      {Number(order.amount || 0).toLocaleString()}
-                    </span>
-                    <span className="detail-subvalue">{order.shipping_zone || 'Outside Dhaka'}</span>
-                  </div>
-                </div>
-                {duplicateWarnings[order.id] && (
-                  <div className="mobile-duplicate-warning" title={duplicateWarnings[order.id].title}>
-                    <AlertTriangle size={13} />
-                    <span>Duplicate: {duplicateWarnings[order.id].label}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="card-footer-elite">
-                <span className="created-at">
-                  {order.created_at
-                    ? new Date(order.created_at).toLocaleString('en-GB', {
-                        day: '2-digit',
-                        month: 'short',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                      })
-                    : 'N/A'}
-                </span>
-                <div className="footer-actions">
-                  <button 
-                    className="details-btn-mobile"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRowClick(order);
-                    }}
-                  >
-                    View Details
-                  </button>
-                  <button 
-                    className="edit-btn-mobile"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenEditModal(order);
-                    }}
-                  >
-                    <Edit2 size={16} />
-                  </button>
-                </div>
-              </div>
             </div>
-          ))}
-          {(!pagedOrders || pagedOrders.length === 0) && !loading && (
-            <div className="mobile-empty-state">No orders found.</div>
-          )}
-          {loading && <div className="mobile-loading-state">Loading...</div>}
-        </div>
 
-
-        {totalPages > 1 && (
-          <div className="pagination-footer">
-            <div className="pagination-info">
-              Showing page {page} of {totalPages} ({filteredOrders.length} matching orders)
-            </div>
-            <div className="pagination-actions">
-              <Button
-                variant="ghost"
+            <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-border">
+              <Button 
+                variant="outline" 
                 size="sm"
-                disabled={page === 1}
-                onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                className="rounded-xl"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRowClick(order);
+                }}
               >
-                Previous
+                View Details
               </Button>
-              <div className="page-numbers">
-                {[...Array(totalPages)].map((_, i) => (
-                  <button
-                    key={i}
-                    className={`page-num ${page === i + 1 ? 'active' : ''}`}
-                    onClick={() => setPage(i + 1)}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-              </div>
-              <Button
-                variant="ghost"
+              <Button 
+                variant="secondary" 
                 size="sm"
-                disabled={page === totalPages}
-                onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+                className="rounded-xl"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenEditModal(order);
+                }}
               >
-                Next
+                <Edit2 size={16} />
               </Button>
             </div>
           </div>
+        ))}
+        {(!pagedOrders || pagedOrders.length === 0) && !loading && (
+          <div className="p-8 text-center text-muted-foreground border border-border rounded-2xl bg-card">No orders found.</div>
+        )}
+        {loading && <div className="p-8 text-center text-muted-foreground border border-border rounded-2xl bg-card">Loading...</div>}
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+          <div className="text-sm text-muted-foreground">
+            Showing page {page} of {totalPages} ({filteredOrders.length} matching orders)
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={page === 1}
+              onClick={() => setPage(prev => Math.max(1, prev - 1))}
+            >
+              Previous
+            </Button>
+            <div className="flex items-center">
+              {[...Array(totalPages)].map((_, i) => {
+                if (
+                  i === 0 || 
+                  i === totalPages - 1 || 
+                  (i >= page - 2 && i <= page)
+                ) {
+                  return (
+                    <button
+                      key={i}
+                      className={`w-8 h-8 rounded-lg text-sm font-medium flex items-center justify-center transition-colors ${
+                        page === i + 1 
+                          ? 'bg-primary text-primary-foreground' 
+                          : 'text-foreground hover:bg-secondary'
+                      }`}
+                      onClick={() => setPage(i + 1)}
+                    >
+                      {i + 1}
+                    </button>
+                  );
+                } else if (
+                  (i === 1 && page > 3) || 
+                  (i === totalPages - 2 && page < totalPages - 2)
+                ) {
+                  return <span key={i} className="px-2 text-muted-foreground">...</span>;
+                }
+                return null;
+              })}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={page === totalPages}
+              onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* ── Bulk Action Bar ── */}
-      {selectedOrderIds.length > 0 && (
-        <div className="bulk-action-bar-container orders-floating-bulk-actions">
-          <div className="bulk-action-bar liquid-glass">
-            <div className="bulk-info">
-              <div className="selection-count">{selectedOrderIds.length}</div>
-              <div className="selection-text">Selected</div>
+      <AnimatePresence>
+        {selectedOrderIds.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-card/80 backdrop-blur-md border border-border shadow-lg px-6 py-3 rounded-full"
+          >
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                {selectedOrderIds.length}
+              </span>
+              <span className="text-sm font-medium text-foreground">Selected</span>
             </div>
-            <button className="bulk-close" onClick={handleClearSelection}>
+            <button className="p-1 rounded-full hover:bg-secondary text-muted-foreground" onClick={handleClearSelection}>
               <X size={16} />
             </button>
-          </div>
-        </div>
-      )}
-      </Card>
-
-
-      <OrderEditModal
-        isOpen={isNewOrderModalOpen}
-        onClose={() => {
-          setIsNewOrderModalOpen(false);
-        }}
-        order={null}
-      />
-
-
-
-
-
-
-
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <OrderDetailsModal
         isOpen={isDetailsModalOpen}

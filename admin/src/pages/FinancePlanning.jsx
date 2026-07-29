@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import './FinancePlanning.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -6,10 +7,16 @@ import {
   TrendingUp, DollarSign, Target, Percent, AlertCircle, Sparkles,
   ArrowRight, ShieldAlert, Check, X, RefreshCw, Layers, ArrowUpRight,
   ArrowDownRight, HelpCircle, Save, ChevronDown, CheckCircle, Search,
-  Eye, EyeOff, ShieldCheck, Landmark
+  Eye, EyeOff, ShieldCheck, Landmark, Calendar, Filter, Plus,
+  BarChart3, PieChart
 } from 'lucide-react';
 import { useConfirmDialog } from '../hooks/useConfirmDialog';
-import './FinancePlanning.css';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table';
+import { cn } from '../lib/utils';
 
 export const FinancePlanning = () => {
   const { confirmDialog, showError, ConfirmDialogComponent } = useConfirmDialog();
@@ -32,6 +39,9 @@ export const FinancePlanning = () => {
     }
     return list;
   }, []);
+
+  // Tabs state
+  const [activeTab, setActiveTab] = useState('all');
 
   // Constants
   const DEFAULT_RETURN_FEE = 60; // BDT per returned parcel
@@ -529,22 +539,34 @@ export const FinancePlanning = () => {
     setIsEditingReturnFee(false);
   };
 
+  const navTabs = [
+    { id: 'all', label: 'All Overview', icon: Layers },
+    { id: 'projections', label: '1. Target Projections', icon: Target },
+    { id: 'actuals', label: '2. Live Analytics', icon: BarChart3 },
+    { id: 'variance', label: '3. Variance Gauges', icon: PieChart },
+    { id: 'ai_insights', label: '4. AI Playbook', icon: Sparkles }
+  ];
+
   return (
-    <div className="tb-wrapper finance-wrapper">
+    <div className="min-h-screen bg-background text-foreground p-4 lg:p-8 space-y-6">
       {/* Header controls */}
-      <div className="tb-page-header">
-        <div className="tb-page-header-left">
-          <div className="tb-breadcrumbs">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-1">
             <span>Marketing</span>
             <span>/</span>
-            <span className="tb-breadcrumb-active">Finance Plan & Projections</span>
+            <span className="text-foreground font-semibold">Finance Plan & Projections</span>
           </div>
-          <h1 className="tb-page-title">Finance Planning Board</h1>
+          <h1 className="font-display text-2xl lg:text-3xl font-bold tracking-tight text-foreground">
+            Finance Planning Board
+          </h1>
         </div>
 
-        <div className="tb-page-header-right">
-          <div className="tb-header-meta">
-            <span className="text-xs uppercase tracking-wider font-semibold opacity-70">Month:</span>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Month selector */}
+          <div className="flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-1.5 shadow-sm">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <span className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Month:</span>
             <select
               value={selectedMonth}
               onChange={(e) => {
@@ -561,744 +583,670 @@ export const FinancePlanning = () => {
                   setSelectedMonth(e.target.value);
                 }
               }}
-              className="month-inline-select"
+              className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer"
             >
               {monthOptions.map(m => (
-                <option key={m} value={m}>{m}</option>
+                <option key={m} value={m} className="bg-card text-foreground">{m}</option>
               ))}
             </select>
           </div>
 
-          <div className="tb-header-meta">
-            <span className="text-xs uppercase tracking-wider font-semibold opacity-70">Return Fee:</span>
+          {/* Return Fee Config */}
+          <div className="flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-1.5 shadow-sm">
+            <span className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Return Fee:</span>
             {isEditingReturnFee ? (
-              <div className="return-edit-wrapper">
-                <input
+              <div className="flex items-center gap-1">
+                <Input
                   type="number"
                   value={tempReturnFee}
                   onChange={(e) => setTempReturnFee(e.target.value)}
-                  className="return-edit-input"
+                  className="h-7 w-16 text-xs font-bold font-mono px-2 py-0"
                   autoFocus
                   onBlur={handleSaveReturnFee}
                   onKeyDown={(e) => e.key === 'Enter' && handleSaveReturnFee()}
                 />
               </div>
             ) : (
-              <span className="return-interactive-value" onClick={() => setIsEditingReturnFee(true)}>
+              <button
+                type="button"
+                onClick={() => setIsEditingReturnFee(true)}
+                className="text-xs font-bold font-mono text-primary underline underline-offset-2 hover:opacity-80 transition-opacity"
+              >
                 ৳{returnFee}
-              </span>
+              </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Summary KPIs Banner */}
-      <div className="tb-welcome-banner finance-aggregates-banner">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <h2>Month Operations Overview</h2>
-          <div className="banner-badge-flex">
-            <span className="tb-badge-pill pill-blue">
-              Planned Sales: ৳{targetSums.sales.toLocaleString()}
-            </span>
-            <span className="tb-badge-pill pill-green">
-              Delivered: ৳{actualSums.revenue.toLocaleString()}
-            </span>
-            <span className="tb-badge-pill pill-red">
-              Return Fees: ৳{actualSums.returnCost.toLocaleString()}
-            </span>
-          </div>
-        </div>
-        <div className="banner-kpis-flex">
-          <div className="kpi-banner-card">
-            <span className="kpi-label">Forecasted Net Profit</span>
-            <strong className={targetSums.net >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-              ৳{targetSums.net.toLocaleString()}
-            </strong>
-          </div>
-          <div className="kpi-banner-card">
-            <span className="kpi-label">Actual Live Net</span>
-            <strong className={actualSums.net >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-              ৳{Math.round(actualSums.net).toLocaleString()}
-            </strong>
-          </div>
-        </div>
+      {/* Tab Navigation (Scrollable Pills) */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none border-b border-border">
+        {navTabs.map(tab => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-2 border shrink-0",
+                isActive
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                  : "bg-card text-muted-foreground border-border hover:bg-secondary hover:text-foreground"
+              )}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Stats Summary Cards (grid grid-cols-2 gap-4 lg:grid-cols-4 mb-6) */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-6">
+        <Card className="animate-slide-up border-border bg-card shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-primary/10 text-primary shrink-0">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider truncate">Planned Sales</p>
+              <h3 className="text-base lg:text-lg font-bold font-mono text-foreground mt-0.5 truncate">৳{targetSums.sales.toLocaleString()}</h3>
+              <p className="text-[11px] text-muted-foreground truncate">{targetSums.qty} Units Target</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="animate-slide-up border-border bg-card shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0">
+              <DollarSign className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider truncate">Delivered Rev</p>
+              <h3 className="text-base lg:text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">৳{actualSums.revenue.toLocaleString()}</h3>
+              <p className="text-[11px] text-muted-foreground truncate">{actualSums.delivered} Parcels Delivered</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="animate-slide-up border-border bg-card shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className={cn("p-3 rounded-xl shrink-0", targetSums.net >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500")}>
+              <Target className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider truncate">Forecast Net</p>
+              <h3 className={cn("text-base lg:text-lg font-bold font-mono mt-0.5 truncate", targetSums.net >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                ৳{targetSums.net.toLocaleString()}
+              </h3>
+              <p className="text-[11px] text-muted-foreground truncate">Investment: ৳{targetSums.investment.toLocaleString()}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="animate-slide-up border-border bg-card shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className={cn("p-3 rounded-xl shrink-0", actualSums.net >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500")}>
+              <Landmark className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider truncate">Actual Live Net</p>
+              <h3 className={cn("text-base lg:text-lg font-bold font-mono mt-0.5 truncate", actualSums.net >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                ৳{Math.round(actualSums.net).toLocaleString()}
+              </h3>
+              <p className="text-[11px] text-muted-foreground truncate">Return Fees: ৳{actualSums.returnCost.toLocaleString()}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* 1. Target Projections Worksheet */}
-      <div className="tb-welcome-banner finance-sheet-container">
-        <div className="sheet-header-actions">
-          <div className="sheet-title-area">
-            <h3>1. Target Projections Worksheet</h3>
-            <p>Define monthly sales targets, unit COGS, packaging, and ad budgets.</p>
-          </div>
+      {(activeTab === 'all' || activeTab === 'projections') && (
+        <Card className="animate-slide-up border-border bg-card shadow-sm">
+          <CardHeader className="p-4 lg:p-6 pb-2">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <CardTitle className="font-display text-lg font-bold text-foreground">
+                  1. Target Projections Worksheet
+                </CardTitle>
+                <CardDescription className="text-xs text-muted-foreground mt-1">
+                  Define monthly sales targets, unit COGS, packaging, and ad budgets.
+                </CardDescription>
+              </div>
 
-          <div className="sheet-buttons-tray">
-            {/* Search */}
-            <div className="sheet-search-wrapper">
-              <Search size={14} className="search-icon-inside" />
-              <input
-                type="text"
-                placeholder="Filter by product..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="sheet-search-input"
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Filter product..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8 h-8 w-44 lg:w-56 text-xs bg-background"
+                  />
+                </div>
+
+                {/* View toggle */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="h-8 gap-1.5 text-xs"
+                >
+                  {showAdvanced ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  <span>{showAdvanced ? 'Simple View' : 'Full Sheet'}</span>
+                </Button>
+
+                {/* Save & Discard Buttons */}
+                {isDirty && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={discardEdits}
+                      className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Discard
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={triggerSaveGrid}
+                      disabled={saving}
+                      className="h-8 gap-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      {saving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                      <span>Save Plan</span>
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
+          </CardHeader>
 
-            {/* Toggle Advanced */}
-            <button 
-              onClick={() => setShowAdvanced(!showAdvanced)} 
-              className="btn-toggle-columns"
-            >
-              {showAdvanced ? <EyeOff size={14} /> : <Eye size={14} />}
-              <span>{showAdvanced ? 'Simple View' : 'Full Sheet'}</span>
-            </button>
+          <CardContent className="p-4 lg:p-6 pt-2">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground space-y-3">
+                <RefreshCw className="w-6 h-6 animate-spin text-primary" />
+                <p className="text-xs">Loading parameters...</p>
+              </div>
+            ) : filteredTargets.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground space-y-3">
+                <Layers className="w-8 h-8 stroke-1" />
+                <p className="text-xs">No products match your search filter.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
+                <Table className="w-full text-xs">
+                  <TableHeader>
+                    <TableRow className="bg-secondary/50 hover:bg-secondary/50">
+                      <TableHead className="font-bold text-foreground">Product Name</TableHead>
+                      <TableHead className="text-center font-bold text-foreground bg-primary/5">Target Qty</TableHead>
+                      <TableHead className="text-right font-bold text-foreground">MRP (৳)</TableHead>
+                      <TableHead className="text-right font-bold text-foreground bg-secondary/80">Total Sales</TableHead>
+                      <TableHead className="text-right font-bold text-foreground">Lifting (COGS)</TableHead>
+                      {showAdvanced && <TableHead className="text-right font-bold text-foreground">Gross Unit</TableHead>}
+                      {showAdvanced && <TableHead className="text-right font-bold text-foreground">Total Gross</TableHead>}
+                      {showAdvanced && <TableHead className="text-right font-bold text-foreground">Packing</TableHead>}
+                      {showAdvanced && <TableHead className="text-right font-bold text-foreground">Total Pack</TableHead>}
+                      {showAdvanced && <TableHead className="text-right font-bold text-foreground">COD (৳)</TableHead>}
+                      {showAdvanced && <TableHead className="text-right font-bold text-foreground">Total COD</TableHead>}
+                      <TableHead className="text-right font-bold text-foreground">Ad BDT</TableHead>
+                      {showAdvanced && <TableHead className="text-right font-bold text-foreground">Ad USD</TableHead>}
+                      {showAdvanced && <TableHead className="text-right font-bold text-foreground">OPEX</TableHead>}
+                      {showAdvanced && <TableHead className="text-right font-bold text-foreground">Total OPEX</TableHead>}
+                      <TableHead className="text-right font-bold text-emerald-600 dark:text-emerald-400">Net Unit</TableHead>
+                      <TableHead className="text-right font-bold text-emerald-600 dark:text-emerald-400">Total Net</TableHead>
+                      <TableHead className="text-right font-bold text-amber-600 dark:text-amber-400">Investment</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTargets.map((row) => (
+                      <TableRow key={row.product_name} className="hover:bg-secondary/30">
+                        <TableCell className="font-semibold text-foreground">{row.product_name}</TableCell>
+                        
+                        {/* Target Qty */}
+                        <TableCell className="p-1 bg-primary/5 text-center">
+                          <Input
+                            type="number"
+                            min="0"
+                            value={row.target_sales_qty}
+                            onChange={(e) => handleCellChange(row.product_name, 'target_sales_qty', e.target.value)}
+                            className={cn(
+                              "h-7 w-20 text-center text-xs font-mono font-bold mx-auto border-border bg-background focus:ring-1 focus:ring-primary",
+                              editedCells[row.product_name]?.target_sales_qty && "border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                            )}
+                          />
+                        </TableCell>
 
-            {/* Actions */}
-            {isDirty && (
-              <div className="changes-action-flex">
-                <button onClick={discardEdits} className="btn-discard-changes">
-                  Discard
-                </button>
-                <button onClick={triggerSaveGrid} className="tb-export-btn" disabled={saving}>
-                  {saving ? <RefreshCw className="animate-spin" size={14} /> : <Save size={14} />}
-                  <span>Save Plan</span>
-                </button>
+                        {/* MRP */}
+                        <TableCell className="p-1 text-right">
+                          <Input
+                            type="number"
+                            min="0"
+                            value={row.mrp}
+                            onChange={(e) => handleCellChange(row.product_name, 'mrp', e.target.value)}
+                            className={cn(
+                              "h-7 w-20 text-right text-xs font-mono font-bold ml-auto border-border bg-background focus:ring-1 focus:ring-primary",
+                              editedCells[row.product_name]?.mrp && "border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                            )}
+                          />
+                        </TableCell>
+
+                        <TableCell className="text-right font-mono font-bold text-foreground bg-secondary/30">
+                          ৳{row.totalSales.toLocaleString()}
+                        </TableCell>
+
+                        {/* Lifting */}
+                        <TableCell className="p-1 text-right">
+                          <Input
+                            type="number"
+                            min="0"
+                            value={row.lifting_cost}
+                            onChange={(e) => handleCellChange(row.product_name, 'lifting_cost', e.target.value)}
+                            className={cn(
+                              "h-7 w-20 text-right text-xs font-mono font-bold ml-auto border-border bg-background focus:ring-1 focus:ring-primary",
+                              editedCells[row.product_name]?.lifting_cost && "border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                            )}
+                          />
+                        </TableCell>
+
+                        {showAdvanced && <TableCell className="text-right font-mono font-bold">৳{row.grossUnit.toLocaleString()}</TableCell>}
+                        {showAdvanced && <TableCell className="text-right font-mono font-bold">৳{row.totalGross.toLocaleString()}</TableCell>}
+                        
+                        {showAdvanced && (
+                          <TableCell className="p-1 text-right">
+                            <Input
+                              type="number"
+                              min="0"
+                              value={row.packing_cost}
+                              onChange={(e) => handleCellChange(row.product_name, 'packing_cost', e.target.value)}
+                              className={cn(
+                                "h-7 w-20 text-right text-xs font-mono ml-auto border-border bg-background",
+                                editedCells[row.product_name]?.packing_cost && "border-amber-500 bg-amber-500/10"
+                              )}
+                            />
+                          </TableCell>
+                        )}
+                        {showAdvanced && <TableCell className="text-right font-mono font-bold">৳{row.totalPack.toLocaleString()}</TableCell>}
+
+                        {showAdvanced && (
+                          <TableCell className="p-1 text-right">
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.5"
+                              value={row.cod_cost}
+                              onChange={(e) => handleCellChange(row.product_name, 'cod_cost', e.target.value)}
+                              className={cn(
+                                "h-7 w-20 text-right text-xs font-mono ml-auto border-border bg-background",
+                                editedCells[row.product_name]?.cod_cost && "border-amber-500 bg-amber-500/10"
+                              )}
+                            />
+                          </TableCell>
+                        )}
+                        {showAdvanced && <TableCell className="text-right font-mono font-bold">৳{row.totalCod.toLocaleString()}</TableCell>}
+
+                        {/* Ad BDT */}
+                        <TableCell className="p-1 text-right">
+                          <Input
+                            type="number"
+                            min="0"
+                            value={row.ad_cost_unit_bdt}
+                            onChange={(e) => handleCellChange(row.product_name, 'ad_cost_unit_bdt', e.target.value)}
+                            className={cn(
+                              "h-7 w-20 text-right text-xs font-mono font-bold ml-auto border-border bg-background focus:ring-1 focus:ring-primary",
+                              editedCells[row.product_name]?.ad_cost_unit_bdt && "border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                            )}
+                          />
+                        </TableCell>
+
+                        {showAdvanced && (
+                          <TableCell className="p-1 text-right">
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.05"
+                              value={row.ad_cost_unit_usd}
+                              onChange={(e) => handleCellChange(row.product_name, 'ad_cost_unit_usd', e.target.value)}
+                              className={cn(
+                                "h-7 w-20 text-right text-xs font-mono ml-auto border-border bg-background",
+                                editedCells[row.product_name]?.ad_cost_unit_usd && "border-amber-500 bg-amber-500/10"
+                              )}
+                            />
+                          </TableCell>
+                        )}
+
+                        {showAdvanced && (
+                          <TableCell className="p-1 text-right">
+                            <Input
+                              type="number"
+                              min="0"
+                              value={row.opex_cost_unit}
+                              onChange={(e) => handleCellChange(row.product_name, 'opex_cost_unit', e.target.value)}
+                              className={cn(
+                                "h-7 w-20 text-right text-xs font-mono ml-auto border-border bg-background",
+                                editedCells[row.product_name]?.opex_cost_unit && "border-amber-500 bg-amber-500/10"
+                              )}
+                            />
+                          </TableCell>
+                        )}
+                        {showAdvanced && <TableCell className="text-right font-mono font-bold">৳{row.totalOpex.toLocaleString()}</TableCell>}
+
+                        {/* Net Unit */}
+                        <TableCell className={cn("text-right font-mono font-bold", row.netUnit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                          ৳{row.netUnit.toLocaleString()}
+                        </TableCell>
+
+                        {/* Total Net */}
+                        <TableCell className={cn("text-right font-mono font-bold", row.totalNetProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                          ৳{row.totalNetProfit.toLocaleString()}
+                        </TableCell>
+
+                        {/* Investment */}
+                        <TableCell className="text-right font-mono font-bold text-amber-600 dark:text-amber-400">
+                          ৳{row.totalInvestment.toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+
+                    {/* Grand Total Row */}
+                    <TableRow className="bg-secondary/70 hover:bg-secondary/70 font-bold border-t-2 border-border">
+                      <TableCell className="font-bold text-foreground">Grand Total</TableCell>
+                      <TableCell className="text-center font-mono font-bold text-foreground">{targetSums.qty}</TableCell>
+                      <TableCell className="text-right font-mono">—</TableCell>
+                      <TableCell className="text-right font-mono font-bold text-foreground">৳{targetSums.sales.toLocaleString()}</TableCell>
+                      <TableCell className="text-right font-mono">—</TableCell>
+                      {showAdvanced && <TableCell className="text-right font-mono">—</TableCell>}
+                      {showAdvanced && <TableCell className="text-right font-mono font-bold">৳{targetSums.gross.toLocaleString()}</TableCell>}
+                      {showAdvanced && <TableCell className="text-right font-mono">—</TableCell>}
+                      {showAdvanced && <TableCell className="text-right font-mono font-bold">৳{targetSums.pack.toLocaleString()}</TableCell>}
+                      {showAdvanced && <TableCell className="text-right font-mono">—</TableCell>}
+                      {showAdvanced && <TableCell className="text-right font-mono font-bold">৳{targetSums.cod.toLocaleString()}</TableCell>}
+                      <TableCell className="text-right font-mono">—</TableCell>
+                      {showAdvanced && <TableCell className="text-right font-mono">—</TableCell>}
+                      {showAdvanced && <TableCell className="text-right font-mono">—</TableCell>}
+                      {showAdvanced && <TableCell className="text-right font-mono font-bold">৳{targetSums.opex.toLocaleString()}</TableCell>}
+                      <TableCell className="text-right font-mono">—</TableCell>
+                      <TableCell className={cn("text-right font-mono font-bold", targetSums.net >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                        ৳{targetSums.net.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-bold text-amber-600 dark:text-amber-400">
+                        ৳{targetSums.investment.toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
               </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {loading ? (
-          <div className="finance-loading">
-            <RefreshCw size={24} className="animate-spin text-teal-500" />
-            <p>Loading parameters...</p>
-          </div>
-        ) : filteredTargets.length === 0 ? (
-          <div className="finance-empty">
-            <Layers size={36} />
-            <p>No products match your search filter.</p>
-          </div>
-        ) : (
-          <>
-            {/* Desktop Table View (No Scroll on Desktops) */}
-            <div className="desktop-view-container">
-              <table className="finance-table">
-                <thead>
-                  <tr>
-                    <th>Product Name</th>
-                    <th className="qty-col highlight-head">Target Qty</th>
-                    <th className="val-col">MRP (৳)</th>
-                    <th className="val-col highlight-calc">Total Sales</th>
-                    <th className="val-col">Lifting (COGS)</th>
-                    {showAdvanced && <th className="val-col highlight-calc">Gross Unit</th>}
-                    {showAdvanced && <th className="val-col highlight-calc">Total Gross</th>}
-                    {showAdvanced && <th className="val-col">Packing</th>}
-                    {showAdvanced && <th className="val-col highlight-calc">Total Pack</th>}
-                    {showAdvanced && <th className="val-col">COD (৳)</th>}
-                    {showAdvanced && <th className="val-col highlight-calc">Total COD</th>}
-                    <th className="val-col">Ad BDT</th>
-                    {showAdvanced && <th className="val-col">Ad USD</th>}
-                    {showAdvanced && <th className="val-col">OPEX</th>}
-                    {showAdvanced && <th className="val-col highlight-calc">Total OPEX</th>}
-                    <th className="val-col highlight-calc text-emerald-400 font-bold">Net Unit</th>
-                    <th className="val-col highlight-calc text-emerald-300 font-bold">Total Net</th>
-                    <th className="val-col highlight-calc text-orange-400 font-bold">Investment</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredTargets.map((row) => (
-                    <tr key={row.product_name}>
-                      <td className="product-title-bold">{row.product_name}</td>
-                      
-                      <td className="qty-col highlight-cell editable-cell">
-                        <input
-                          type="number"
-                          min="0"
-                          value={row.target_sales_qty}
-                          onChange={(e) => handleCellChange(row.product_name, 'target_sales_qty', e.target.value)}
-                          className={`spreadsheet-cell-input ${editedCells[row.product_name]?.target_sales_qty ? 'dirty' : ''}`}
-                        />
-                      </td>
+      {/* 2. Live Performance Analytics */}
+      {(activeTab === 'all' || activeTab === 'actuals') && (
+        <Card className="animate-slide-up border-border bg-card shadow-sm">
+          <CardHeader className="p-4 lg:p-6 pb-2">
+            <CardTitle className="font-display text-lg font-bold text-foreground">
+              2. Live Performance Analytics
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground mt-1">
+              Live metrics from the CRM order base for the current billing cycle.
+            </CardDescription>
+          </CardHeader>
 
-                      <td className="editable-cell">
-                        <input
-                          type="number"
-                          min="0"
-                          value={row.mrp}
-                          onChange={(e) => handleCellChange(row.product_name, 'mrp', e.target.value)}
-                          className={`spreadsheet-cell-input ${editedCells[row.product_name]?.mrp ? 'dirty' : ''}`}
-                        />
-                      </td>
-
-                      <td className="calc-cell">৳{row.totalSales.toLocaleString()}</td>
-
-                      <td className="editable-cell">
-                        <input
-                          type="number"
-                          min="0"
-                          value={row.lifting_cost}
-                          onChange={(e) => handleCellChange(row.product_name, 'lifting_cost', e.target.value)}
-                          className={`spreadsheet-cell-input ${editedCells[row.product_name]?.lifting_cost ? 'dirty' : ''}`}
-                        />
-                      </td>
-
-                      {showAdvanced && <td className="calc-cell">৳{row.grossUnit.toLocaleString()}</td>}
-                      {showAdvanced && <td className="calc-cell">৳{row.totalGross.toLocaleString()}</td>}
-                      
-                      {showAdvanced && (
-                        <td className="editable-cell">
-                          <input
-                            type="number"
-                            min="0"
-                            value={row.packing_cost}
-                            onChange={(e) => handleCellChange(row.product_name, 'packing_cost', e.target.value)}
-                            className={`spreadsheet-cell-input ${editedCells[row.product_name]?.packing_cost ? 'dirty' : ''}`}
-                          />
-                        </td>
-                      )}
-                      {showAdvanced && <td className="calc-cell">৳{row.totalPack.toLocaleString()}</td>}
-
-                      {showAdvanced && (
-                        <td className="editable-cell">
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.5"
-                            value={row.cod_cost}
-                            onChange={(e) => handleCellChange(row.product_name, 'cod_cost', e.target.value)}
-                            className={`spreadsheet-cell-input ${editedCells[row.product_name]?.cod_cost ? 'dirty' : ''}`}
-                          />
-                        </td>
-                      )}
-                      {showAdvanced && <td className="calc-cell">৳{row.totalCod.toLocaleString()}</td>}
-
-                      <td className="editable-cell">
-                        <input
-                          type="number"
-                          min="0"
-                          value={row.ad_cost_unit_bdt}
-                          onChange={(e) => handleCellChange(row.product_name, 'ad_cost_unit_bdt', e.target.value)}
-                          className={`spreadsheet-cell-input ${editedCells[row.product_name]?.ad_cost_unit_bdt ? 'dirty' : ''}`}
-                        />
-                      </td>
-
-                      {showAdvanced && (
-                        <td className="editable-cell">
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.05"
-                            value={row.ad_cost_unit_usd}
-                            onChange={(e) => handleCellChange(row.product_name, 'ad_cost_unit_usd', e.target.value)}
-                            className={`spreadsheet-cell-input ${editedCells[row.product_name]?.ad_cost_unit_usd ? 'dirty' : ''}`}
-                          />
-                        </td>
-                      )}
-
-                      {showAdvanced && (
-                        <td className="editable-cell">
-                          <input
-                            type="number"
-                            min="0"
-                            value={row.opex_cost_unit}
-                            onChange={(e) => handleCellChange(row.product_name, 'opex_cost_unit', e.target.value)}
-                            className={`spreadsheet-cell-input ${editedCells[row.product_name]?.opex_cost_unit ? 'dirty' : ''}`}
-                          />
-                        </td>
-                      )}
-                      {showAdvanced && <td className="calc-cell">৳{row.totalOpex.toLocaleString()}</td>}
-
-                      <td className={`calc-cell font-bold ${row.netUnit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        ৳{row.netUnit.toLocaleString()}
-                      </td>
-
-                      <td className={`calc-cell font-bold ${row.totalNetProfit >= 0 ? 'text-emerald-300' : 'text-red-400'}`}>
-                        ৳{row.totalNetProfit.toLocaleString()}
-                      </td>
-
-                      <td className="calc-cell font-bold text-orange-400">৳{row.totalInvestment.toLocaleString()}</td>
-                    </tr>
+          <CardContent className="p-4 lg:p-6 pt-2">
+            <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
+              <Table className="w-full text-xs">
+                <TableHeader>
+                  <TableRow className="bg-secondary/50 hover:bg-secondary/50">
+                    <TableHead className="font-bold text-foreground">Product</TableHead>
+                    <TableHead className="text-center font-bold text-sky-600 dark:text-sky-400">Confirmed</TableHead>
+                    <TableHead className="text-center font-bold text-emerald-600 dark:text-emerald-400">Delivered</TableHead>
+                    <TableHead className="text-center font-bold text-rose-600 dark:text-rose-400">Returned</TableHead>
+                    <TableHead className="text-right font-bold text-foreground">Delivered Rev</TableHead>
+                    <TableHead className="text-right font-bold text-rose-600 dark:text-rose-400">Return Fees</TableHead>
+                    <TableHead className="text-right font-bold text-teal-600 dark:text-teal-400">Content Cost</TableHead>
+                    <TableHead className="text-right font-bold text-emerald-600 dark:text-emerald-400">Actual Net</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {liveActualsByProduct.map(row => (
+                    <TableRow key={row.product_name} className="hover:bg-secondary/30">
+                      <TableCell className="font-semibold text-foreground">{row.product_name}</TableCell>
+                      <TableCell className="text-center font-mono font-semibold text-sky-600 dark:text-sky-400">{row.confirmedCount}</TableCell>
+                      <TableCell className="text-center font-mono font-semibold text-emerald-600 dark:text-emerald-400">{row.deliveredCount}</TableCell>
+                      <TableCell className="text-center font-mono font-semibold text-rose-600 dark:text-rose-400">{row.cancelledCount}</TableCell>
+                      <TableCell className="text-right font-mono font-bold text-foreground">৳{row.revenue.toLocaleString()}</TableCell>
+                      <TableCell className="text-right font-mono font-bold text-rose-600 dark:text-rose-400">৳{row.returnCost.toLocaleString()}</TableCell>
+                      <TableCell className="text-right font-mono font-bold text-teal-600 dark:text-teal-400">৳{row.contentCost.toLocaleString()}</TableCell>
+                      <TableCell className={cn("text-right font-mono font-bold", row.netProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                        ৳{Math.round(row.netProfit).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
                   ))}
                   
-                  <tr className="totals-row font-bold">
-                    <td>Grand Total</td>
-                    <td>{targetSums.qty}</td>
-                    <td>—</td>
-                    <td>৳{targetSums.sales.toLocaleString()}</td>
-                    <td>—</td>
-                    {showAdvanced && <td>—</td>}
-                    {showAdvanced && <td>৳{targetSums.gross.toLocaleString()}</td>}
-                    {showAdvanced && <td>—</td>}
-                    {showAdvanced && <td>৳{targetSums.pack.toLocaleString()}</td>}
-                    {showAdvanced && <td>—</td>}
-                    {showAdvanced && <td>৳{targetSums.cod.toLocaleString()}</td>}
-                    <td>—</td>
-                    {showAdvanced && <td>—</td>}
-                    {showAdvanced && <td>—</td>}
-                    {showAdvanced && <td>৳{targetSums.opex.toLocaleString()}</td>}
-                    <td>—</td>
-                    <td className={targetSums.net >= 0 ? 'text-emerald-300' : 'text-red-400'}>
-                      ৳{targetSums.net.toLocaleString()}
-                    </td>
-                    <td className="text-orange-400">৳{targetSums.investment.toLocaleString()}</td>
-                  </tr>
-                </tbody>
-              </table>
+                  {/* Totals Row */}
+                  <TableRow className="bg-secondary/70 hover:bg-secondary/70 font-bold border-t-2 border-border">
+                    <TableCell className="font-bold text-foreground">Total Actuals</TableCell>
+                    <TableCell className="text-center font-mono font-bold text-sky-600 dark:text-sky-400">{actualSums.confirmed}</TableCell>
+                    <TableCell className="text-center font-mono font-bold text-emerald-600 dark:text-emerald-400">{actualSums.delivered}</TableCell>
+                    <TableCell className="text-center font-mono font-bold text-rose-600 dark:text-rose-400">{actualSums.cancelled}</TableCell>
+                    <TableCell className="text-right font-mono font-bold text-foreground">৳{actualSums.revenue.toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-mono font-bold text-rose-600 dark:text-rose-400">৳{actualSums.returnCost.toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-mono font-bold text-teal-600 dark:text-teal-400">৳{actualSums.content.toLocaleString()}</TableCell>
+                    <TableCell className={cn("text-right font-mono font-bold", actualSums.net >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                      ৳{Math.round(actualSums.net).toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
             </div>
+          </CardContent>
+        </Card>
+      )}
 
-            {/* Mobile Stacked Cards View (No horizontal scroll) */}
-            <div className="mobile-cards-container">
-              {filteredTargets.map((row) => (
-                <div key={row.product_name} className="mobile-product-card">
-                  <div className="mobile-card-header">
-                    <h4>{row.product_name}</h4>
-                  </div>
-                  
-                  <div className="mobile-card-grid">
-                    {/* Inputs */}
-                    <div className="mobile-grid-item edit-item">
-                      <span className="mobile-item-label">Target Qty</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={row.target_sales_qty}
-                        onChange={(e) => handleCellChange(row.product_name, 'target_sales_qty', e.target.value)}
-                        className={`spreadsheet-cell-input ${editedCells[row.product_name]?.target_sales_qty ? 'dirty' : ''}`}
-                      />
-                    </div>
+      {/* 3. Target vs Live Variance Gauges */}
+      {(activeTab === 'all' || activeTab === 'variance') && (
+        <Card className="animate-slide-up border-border bg-card shadow-sm">
+          <CardHeader className="p-4 lg:p-6 pb-2">
+            <CardTitle className="font-display text-lg font-bold text-foreground">
+              3. Target vs Live Variance
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground mt-1">
+              Live progress tracking towards targeted indicators.
+            </CardDescription>
+          </CardHeader>
 
-                    <div className="mobile-grid-item edit-item">
-                      <span className="mobile-item-label">MRP (৳)</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={row.mrp}
-                        onChange={(e) => handleCellChange(row.product_name, 'mrp', e.target.value)}
-                        className={`spreadsheet-cell-input ${editedCells[row.product_name]?.mrp ? 'dirty' : ''}`}
-                      />
-                    </div>
-
-                    <div className="mobile-grid-item edit-item">
-                      <span className="mobile-item-label">Lifting (COGS)</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={row.lifting_cost}
-                        onChange={(e) => handleCellChange(row.product_name, 'lifting_cost', e.target.value)}
-                        className={`spreadsheet-cell-input ${editedCells[row.product_name]?.lifting_cost ? 'dirty' : ''}`}
-                      />
-                    </div>
-
-                    <div className="mobile-grid-item edit-item">
-                      <span className="mobile-item-label">Ad BDT</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={row.ad_cost_unit_bdt}
-                        onChange={(e) => handleCellChange(row.product_name, 'ad_cost_unit_bdt', e.target.value)}
-                        className={`spreadsheet-cell-input ${editedCells[row.product_name]?.ad_cost_unit_bdt ? 'dirty' : ''}`}
-                      />
-                    </div>
-
-                    {showAdvanced && (
-                      <>
-                        <div className="mobile-grid-item edit-item">
-                          <span className="mobile-item-label">Packing</span>
-                          <input
-                            type="number"
-                            min="0"
-                            value={row.packing_cost}
-                            onChange={(e) => handleCellChange(row.product_name, 'packing_cost', e.target.value)}
-                            className={`spreadsheet-cell-input ${editedCells[row.product_name]?.packing_cost ? 'dirty' : ''}`}
-                          />
-                        </div>
-
-                        <div className="mobile-grid-item edit-item">
-                          <span className="mobile-item-label">COD BDT</span>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.5"
-                            value={row.cod_cost}
-                            onChange={(e) => handleCellChange(row.product_name, 'cod_cost', e.target.value)}
-                            className={`spreadsheet-cell-input ${editedCells[row.product_name]?.cod_cost ? 'dirty' : ''}`}
-                          />
-                        </div>
-
-                        <div className="mobile-grid-item edit-item">
-                          <span className="mobile-item-label">OPEX</span>
-                          <input
-                            type="number"
-                            min="0"
-                            value={row.opex_cost_unit}
-                            onChange={(e) => handleCellChange(row.product_name, 'opex_cost_unit', e.target.value)}
-                            className={`spreadsheet-cell-input ${editedCells[row.product_name]?.opex_cost_unit ? 'dirty' : ''}`}
-                          />
-                        </div>
-
-                        <div className="mobile-grid-item edit-item">
-                          <span className="mobile-item-label">Ad USD</span>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.05"
-                            value={row.ad_cost_unit_usd}
-                            onChange={(e) => handleCellChange(row.product_name, 'ad_cost_unit_usd', e.target.value)}
-                            className={`spreadsheet-cell-input ${editedCells[row.product_name]?.ad_cost_unit_usd ? 'dirty' : ''}`}
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {/* Calculated values */}
-                    <div className="mobile-grid-item">
-                      <span className="mobile-item-label">Total Sales</span>
-                      <span className="mobile-item-val">৳{row.totalSales.toLocaleString()}</span>
-                    </div>
-
-                    <div className="mobile-grid-item">
-                      <span className="mobile-item-label">Net / Unit</span>
-                      <span className={`mobile-item-val font-bold ${row.netUnit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        ৳{row.netUnit.toLocaleString()}
-                      </span>
-                    </div>
-
-                    <div className="mobile-grid-item">
-                      <span className="mobile-item-label">Total Net</span>
-                      <span className={`mobile-item-val font-bold ${row.totalNetProfit >= 0 ? 'text-emerald-300' : 'text-red-400'}`}>
-                        ৳{row.totalNetProfit.toLocaleString()}
-                      </span>
-                    </div>
-
-                    <div className="mobile-grid-item">
-                      <span className="mobile-item-label">Investment</span>
-                      <span className="mobile-item-val text-orange-400 font-bold">৳{row.totalInvestment.toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {/* Mobile Grand Totals Card */}
-              <div className="mobile-product-card mobile-totals-card">
-                <div className="mobile-card-header">
-                  <h4>Grand Totals</h4>
-                </div>
-                <div className="mobile-card-grid">
-                  <div className="mobile-grid-item">
-                    <span className="mobile-item-label">Total Qty</span>
-                    <span className="mobile-item-val font-bold">{targetSums.qty}</span>
-                  </div>
-                  <div className="mobile-grid-item">
-                    <span className="mobile-item-label">Total Sales</span>
-                    <span className="mobile-item-val font-bold">৳{targetSums.sales.toLocaleString()}</span>
-                  </div>
-                  <div className="mobile-grid-item">
-                    <span className="mobile-item-label">Total Net Profit</span>
-                    <span className={`mobile-item-val font-bold ${targetSums.net >= 0 ? 'text-emerald-300' : 'text-red-400'}`}>
-                      ৳{targetSums.net.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="mobile-grid-item">
-                    <span className="mobile-item-label">Total Investment</span>
-                    <span className="mobile-item-val font-bold text-orange-400">৳{targetSums.investment.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Actuals vs Target Variance Layout */}
-      <div className="finance-grid-layout">
-        
-        {/* 2. Live Performance Analytics */}
-        <div className="tb-welcome-banner actuals-card">
-          <div className="sheet-title-area">
-            <h3>2. Live Performance Analytics</h3>
-            <p>Live metrics from the CRM order base for the current billing cycle.</p>
-          </div>
-
-          {/* Desktop view */}
-          <div className="desktop-view-container">
-            <table className="actuals-table">
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th className="num-col">Confirmed</th>
-                  <th className="num-col">Delivered</th>
-                  <th className="num-col">Returned</th>
-                  <th className="cost-col">Delivered Rev</th>
-                  <th className="cost-col">Return Fees</th>
-                  <th className="cost-col">Content Cost</th>
-                  <th className="cost-col text-emerald-300 font-bold">Actual Net</th>
-                </tr>
-              </thead>
-              <tbody>
-                {liveActualsByProduct.map(row => (
-                  <tr key={row.product_name}>
-                    <td className="font-bold">{row.product_name}</td>
-                    <td className="num-col text-sky-400 font-semibold">{row.confirmedCount}</td>
-                    <td className="num-col text-emerald-400 font-semibold">{row.deliveredCount}</td>
-                    <td className="num-col text-rose-400 font-semibold">{row.cancelledCount}</td>
-                    <td className="cost-col font-semibold">৳{row.revenue.toLocaleString()}</td>
-                    <td className="cost-col text-rose-400 font-semibold">৳{row.returnCost.toLocaleString()}</td>
-                    <td className="cost-col text-teal-400">৳{row.contentCost.toLocaleString()}</td>
-                    <td className={`cost-col font-bold ${row.netProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      ৳{Math.round(row.netProfit).toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-                
-                <tr className="totals-row font-bold">
-                  <td>Total Actuals</td>
-                  <td className="text-sky-400">{actualSums.confirmed}</td>
-                  <td className="text-emerald-400">{actualSums.delivered}</td>
-                  <td className="text-rose-400">{actualSums.cancelled}</td>
-                  <td>৳{actualSums.revenue.toLocaleString()}</td>
-                  <td className="text-rose-400">৳{actualSums.returnCost.toLocaleString()}</td>
-                  <td className="text-teal-400">৳{actualSums.content}</td>
-                  <td className={actualSums.net >= 0 ? 'text-emerald-300' : 'text-red-400'}>
-                    ৳{Math.round(actualSums.net).toLocaleString()}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile view */}
-          <div className="mobile-cards-container">
-            {liveActualsByProduct.map(row => (
-              <div key={row.product_name} className="mobile-product-card actual-item-card">
-                <div className="mobile-card-header">
-                  <h4>{row.product_name}</h4>
-                </div>
-                <div className="mobile-card-grid">
-                  <div className="mobile-grid-item">
-                    <span className="mobile-item-label">Confirmed</span>
-                    <span className="mobile-item-val text-sky-400 font-semibold">{row.confirmedCount}</span>
-                  </div>
-                  <div className="mobile-grid-item">
-                    <span className="mobile-item-label">Delivered</span>
-                    <span className="mobile-item-val text-emerald-400 font-semibold">{row.deliveredCount}</span>
-                  </div>
-                  <div className="mobile-grid-item">
-                    <span className="mobile-item-label">Returned</span>
-                    <span className="mobile-item-val text-rose-400 font-semibold">{row.cancelledCount}</span>
-                  </div>
-                  <div className="mobile-grid-item">
-                    <span className="mobile-item-label">Revenue</span>
-                    <span className="mobile-item-val font-semibold">৳{row.revenue.toLocaleString()}</span>
-                  </div>
-                  <div className="mobile-grid-item">
-                    <span className="mobile-item-label">Return Fees</span>
-                    <span className="mobile-item-val text-rose-400">৳{row.returnCost.toLocaleString()}</span>
-                  </div>
-                  <div className="mobile-grid-item">
-                    <span className="mobile-item-label">Content Cost</span>
-                    <span className="mobile-item-val text-teal-400">৳{row.contentCost.toLocaleString()}</span>
-                  </div>
-                  <div className="mobile-grid-item full-width-item">
-                    <span className="mobile-item-label">Actual Net Profit</span>
-                    <span className={`mobile-item-val font-bold ${row.netProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      ৳{Math.round(row.netProfit).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {/* Mobile Actuals Totals Card */}
-            <div className="mobile-product-card mobile-totals-card">
-              <div className="mobile-card-header">
-                <h4>Total Actuals</h4>
-              </div>
-              <div className="mobile-card-grid">
-                <div className="mobile-grid-item">
-                  <span className="mobile-item-label">Confirmed</span>
-                  <span className="mobile-item-val text-sky-400">{actualSums.confirmed}</span>
-                </div>
-                <div className="mobile-grid-item">
-                  <span className="mobile-item-label">Delivered</span>
-                  <span className="mobile-item-val text-emerald-400">{actualSums.delivered}</span>
-                </div>
-                <div className="mobile-grid-item">
-                  <span className="mobile-item-label">Revenue</span>
-                  <span className="mobile-item-val">৳{actualSums.revenue.toLocaleString()}</span>
-                </div>
-                <div className="mobile-grid-item">
-                  <span className="mobile-item-label">Net Profit</span>
-                  <span className={`mobile-item-val font-bold ${actualSums.net >= 0 ? 'text-emerald-300' : 'text-red-400'}`}>
-                    ৳{Math.round(actualSums.net).toLocaleString()}
+          <CardContent className="p-4 lg:p-6 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Confirmations Volume Gauge */}
+              <div className="p-4 rounded-xl border border-border bg-background shadow-2xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Confirmations Volume</span>
+                  <span className="text-xs font-bold font-mono text-sky-600 dark:text-sky-400">
+                    {targetSums.qty > 0 ? ((actualSums.confirmed / targetSums.qty) * 100).toFixed(0) : 0}%
                   </span>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Target vs Live Variance */}
-        <div className="tb-welcome-banner targets-gauge-card">
-          <div className="sheet-title-area">
-            <h3>3. Target vs Live Variance</h3>
-            <p>Live progress tracking towards targeted indicators.</p>
-          </div>
-
-          <div className="kpi-compare-grid">
-            <div className="kpi-gauge-pill">
-              <div className="kpi-labels-row">
-                <span className="kpi-meta-name">Confirmations Volume</span>
-                <span className="kpi-pct-delta text-sky-400">
-                  {targetSums.qty > 0 ? ((actualSums.confirmed / targetSums.qty) * 100).toFixed(0) : 0}%
-                </span>
-              </div>
-              <div className="kpi-nums-row">
-                <strong>{actualSums.confirmed}</strong>
-                <span className="separator">/</span>
-                <span className="target-num">{targetSums.qty} Qty</span>
-              </div>
-              <div className="kpi-progress-bar-bg">
-                <div 
-                  className="kpi-progress-bar-fill progress-blue" 
-                  style={{ width: `${Math.min(targetSums.qty > 0 ? (actualSums.confirmed / targetSums.qty) * 100 : 0, 100)}%` }} 
-                />
-              </div>
-            </div>
-
-            <div className="kpi-gauge-pill">
-              <div className="kpi-labels-row">
-                <span className="kpi-meta-name">Delivered Sales Revenue</span>
-                <span className="kpi-pct-delta text-emerald-400">
-                  {targetSums.sales > 0 ? ((actualSums.revenue / targetSums.sales) * 100).toFixed(0) : 0}%
-                </span>
-              </div>
-              <div className="kpi-nums-row">
-                <strong>৳{actualSums.revenue.toLocaleString()}</strong>
-                <span className="separator">/</span>
-                <span className="target-num">৳{targetSums.sales.toLocaleString()}</span>
-              </div>
-              <div className="kpi-progress-bar-bg">
-                <div 
-                  className="kpi-progress-bar-fill progress-green" 
-                  style={{ width: `${Math.min(targetSums.sales > 0 ? (actualSums.revenue / targetSums.sales) * 100 : 0, 100)}%` }} 
-                />
-              </div>
-            </div>
-
-            <div className="kpi-gauge-pill">
-              <div className="kpi-labels-row">
-                <span className="kpi-meta-name">Net Operating Profits</span>
-                <span className="kpi-pct-delta text-orange-400">
-                  {targetSums.net > 0 ? ((actualSums.net / targetSums.net) * 100).toFixed(0) : 0}%
-                </span>
-              </div>
-              <div className="kpi-nums-row">
-                <strong>৳{Math.round(actualSums.net).toLocaleString()}</strong>
-                <span className="separator">/</span>
-                <span className="target-num">৳{targetSums.net.toLocaleString()}</span>
-              </div>
-              <div className="kpi-progress-bar-bg">
-                <div 
-                  className="kpi-progress-bar-fill progress-orange" 
-                  style={{ width: `${Math.min(targetSums.net > 0 ? (actualSums.net / targetSums.net) * 100 : 0, 100)}%` }} 
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* AI Strategist Recommendations */}
-      <div className="tb-welcome-banner advisory-card-outer">
-        <div className="advisory-title-bar">
-          <Sparkles className="spark-glowing" size={18} />
-          <div>
-            <h3>AI Strategist Playbook Optimizer</h3>
-            <p>Heuristics comparing live revenue data against marketing target budgets.</p>
-          </div>
-        </div>
-
-        {advisoryInsights.length === 0 ? (
-          <div className="advisory-empty">
-            <CheckCircle className="text-emerald-400 animate-bounce" size={20} />
-            <p>Operations are running optimally with zero margin leaks or volume gaps detected.</p>
-          </div>
-        ) : (
-          <div className="advisory-grid">
-            {advisoryInsights.map((insight, idx) => (
-              <motion.div 
-                key={idx}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
-                className={`advisory-pill border-${insight.type}`}
-              >
-                <div className="insight-header">
-                  <span className={`badge-indicator badge-${insight.type}`}>
-                    {insight.type === 'danger' && 'Margin Leak'}
-                    {insight.type === 'warning' && 'Volume Gap'}
-                    {insight.type === 'success' && 'Scaling Opportunity'}
-                    {insight.type === 'info' && 'Margin Compression'}
-                    {insight.type === 'global' && 'Strategic Notice'}
-                  </span>
-                  {insight.product && <span className="insight-product-label">{insight.product}</span>}
+                <div className="flex items-baseline justify-between">
+                  <span className="text-lg font-bold font-mono text-foreground">{actualSums.confirmed}</span>
+                  <span className="text-xs font-mono font-bold text-muted-foreground">/ {targetSums.qty} Qty</span>
                 </div>
-                <h4>{insight.title}</h4>
-                <p>{insight.suggestion}</p>
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </div>
+                <div className="w-full h-2.5 bg-secondary rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-sky-500 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(targetSums.qty > 0 ? (actualSums.confirmed / targetSums.qty) * 100 : 0, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Delivered Sales Revenue Gauge */}
+              <div className="p-4 rounded-xl border border-border bg-background shadow-2xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Delivered Revenue</span>
+                  <span className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                    {targetSums.sales > 0 ? ((actualSums.revenue / targetSums.sales) * 100).toFixed(0) : 0}%
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">৳{actualSums.revenue.toLocaleString()}</span>
+                  <span className="text-xs font-mono font-bold text-muted-foreground">/ ৳{targetSums.sales.toLocaleString()}</span>
+                </div>
+                <div className="w-full h-2.5 bg-secondary rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(targetSums.sales > 0 ? (actualSums.revenue / targetSums.sales) * 100 : 0, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Net Operating Profits Gauge */}
+              <div className="p-4 rounded-xl border border-border bg-background shadow-2xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Net Operating Profits</span>
+                  <span className="text-xs font-bold font-mono text-amber-600 dark:text-amber-400">
+                    {targetSums.net > 0 ? ((actualSums.net / targetSums.net) * 100).toFixed(0) : 0}%
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-lg font-bold font-mono text-amber-600 dark:text-amber-400">৳{Math.round(actualSums.net).toLocaleString()}</span>
+                  <span className="text-xs font-mono font-bold text-muted-foreground">/ ৳{targetSums.net.toLocaleString()}</span>
+                </div>
+                <div className="w-full h-2.5 bg-secondary rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(targetSums.net > 0 ? (actualSums.net / targetSums.net) * 100 : 0, 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 4. AI Strategist Playbook Optimizer */}
+      {(activeTab === 'all' || activeTab === 'ai_insights') && (
+        <Card className="animate-slide-up border-border bg-card shadow-sm">
+          <CardHeader className="p-4 lg:p-6 pb-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
+              <div>
+                <CardTitle className="font-display text-lg font-bold text-foreground">
+                  AI Strategist Playbook Optimizer
+                </CardTitle>
+                <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                  Heuristics comparing live revenue data against marketing target budgets.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-4 lg:p-6 pt-2">
+            {advisoryInsights.length === 0 ? (
+              <div className="flex items-center gap-3 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs font-medium">
+                <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
+                <p>Operations are running optimally with zero margin leaks or volume gaps detected.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {advisoryInsights.map((insight, idx) => {
+                  const badgeVariantMap = {
+                    danger: 'destructive',
+                    warning: 'warning',
+                    success: 'success',
+                    info: 'info',
+                    global: 'courier'
+                  };
+                  return (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className="p-4 rounded-xl border border-border bg-background shadow-2xs space-y-2 hover:border-primary/40 transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge variant={badgeVariantMap[insight.type] || 'default'}>
+                          {insight.type === 'danger' && 'Margin Leak'}
+                          {insight.type === 'warning' && 'Volume Gap'}
+                          {insight.type === 'success' && 'Scaling Opportunity'}
+                          {insight.type === 'info' && 'Margin Compression'}
+                          {insight.type === 'global' && 'Strategic Notice'}
+                        </Badge>
+                        {insight.product && (
+                          <span className="text-[11px] font-semibold text-muted-foreground truncate">{insight.product}</span>
+                        )}
+                      </div>
+                      <h4 className="text-xs font-bold text-foreground">{insight.title}</h4>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{insight.suggestion}</p>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* ⚠️ Risk Confirmation Overlay Modal */}
       <AnimatePresence>
         {riskModal.isOpen && (
-          <div className="finance-modal-overlay">
-            <motion.div 
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="finance-modal-card"
+              className="bg-card border border-border rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-slide-up"
             >
-              <div className="modal-header-warn">
-                <ShieldAlert size={20} />
-                <h3>{riskModal.title}</h3>
+              <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
+                <ShieldAlert className="w-6 h-6 shrink-0" />
+                <h3 className="font-display text-base font-bold text-foreground">{riskModal.title}</h3>
               </div>
-              <div className="modal-body-warn">
-                <p className="description-text">{riskModal.message}</p>
-                
-                <div className="change-details-scroll">
-                  <h4>Proposed target adjustments:</h4>
-                  <ul>
+
+              <div className="space-y-3 text-xs text-muted-foreground">
+                <p className="leading-relaxed">{riskModal.message}</p>
+
+                <div className="max-h-48 overflow-y-auto rounded-xl border border-border bg-secondary/50 p-3 space-y-2">
+                  <h4 className="font-bold text-foreground text-xs">Proposed target adjustments:</h4>
+                  <ul className="space-y-1">
                     {riskModal.changes.map((c, i) => (
-                      <li key={i}>
-                        <strong>{c.product}</strong>: {c.details}
+                      <li key={i} className="text-[11px] leading-tight">
+                        <strong className="text-foreground">{c.product}</strong>: {c.details}
                       </li>
                     ))}
                   </ul>
                 </div>
-                
-                <div className="warning-notice-footer">
+
+                <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[11px] leading-snug">
                   🚨 Saving skews marketing dashboard statistics. Verify parameters carefully before confirming.
                 </div>
               </div>
-              
-              <div className="modal-footer-buttons">
-                <button onClick={riskModal.onCancel} className="btn-modal-cancel">
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={riskModal.onCancel}
+                  className="text-xs"
+                >
                   Discard changes
-                </button>
-                <button onClick={riskModal.onConfirm} className="btn-modal-confirm">
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={riskModal.onConfirm}
+                  className="text-xs font-semibold"
+                >
                   Confirm & Write targets
-                </button>
+                </Button>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
       {ConfirmDialogComponent}
     </div>
   );
 };
-

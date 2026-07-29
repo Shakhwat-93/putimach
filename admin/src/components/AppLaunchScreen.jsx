@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
+import './AppLaunchScreen.css';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useBranding } from '../hooks/useBranding';
 import orderflowLogo from '../assets/logo.png';
 import { MOTION_EASE } from '../lib/motion';
-import './AppLaunchScreen.css';
 
 const launchCopyVariants = {
   hidden: { opacity: 0, y: 18 },

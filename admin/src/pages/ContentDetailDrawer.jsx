@@ -3,13 +3,13 @@
  * Shows complete info for one content item across 6 tabs.
  */
 import React, { useState } from 'react';
+import './ContentDetailDrawer.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, ExternalLink, Calendar, User, MapPin, Clock, DollarSign,
   FileText, Film, Image, Link2, CheckCircle2, XCircle,
   ChevronRight, Activity, Edit2, Folder
 } from 'lucide-react';
-import './ContentDetailDrawer.css';
 
 /* ── Constants ──────────────────────────────────── */
 export const WORKFLOW_STAGES = [
@@ -83,7 +83,7 @@ const WorkflowProgress = ({ status }) => {
 export const StatusBadge = ({ status, size = 'md' }) => {
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG['Planning'];
   return (
-    <span className={`cdd-status-badge cdd-status-${size}`} style={{ color: cfg.color, background: cfg.bg, borderColor: cfg.border }}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary cdd-status-${size}`} style={{ color: cfg.color, background: cfg.bg, borderColor: cfg.border }}>
       {status}
     </span>
   );
@@ -110,9 +110,9 @@ export const ContentDetailDrawer = ({ item, activityLogs, onClose, onStatusChang
 
   return (
     <AnimatePresence>
-      <div className="cdd-overlay">
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[1100] flex justify-end">
         <motion.div
-          className="cdd-panel"
+          className="w-full max-w-xl h-full bg-card border-l border-border shadow-2xl flex flex-col overflow-hidden"
           initial={{ x: '100%', opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: '100%', opacity: 0 }}
@@ -120,19 +120,19 @@ export const ContentDetailDrawer = ({ item, activityLogs, onClose, onStatusChang
           onClick={e => e.stopPropagation()}
         >
           {/* Drawer Header */}
-          <div className="cdd-header">
-            <div className="cdd-header-left">
+          <div className="flex items-start justify-between p-6 border-b border-border gap-3 shrink-0 bg-muted/20">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-0">
               <StatusBadge status={item.workflow_status} />
               <div className="cdd-header-title-area">
-                <h2 className="cdd-title">{title}</h2>
-                <p className="cdd-subtitle">{item.product_name} · {item.content_type || 'UGC'} · {item.platform || 'Facebook'}</p>
+                <h2 className="text-lg font-bold text-foreground truncate">{title}</h2>
+                <p className="text-xs text-muted-foreground font-medium">{item.product_name} · {item.content_type || 'UGC'} · {item.platform || 'Facebook'}</p>
               </div>
             </div>
-            <div className="cdd-header-actions">
-              <button className="cdd-edit-btn" onClick={onEdit} title="Edit content item">
+            <div className="flex items-center gap-2 shrink-0">
+              <button className="h-8 w-8 rounded-lg border border-border bg-background text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors flex items-center justify-center" onClick={onEdit} title="Edit content item">
                 <Edit2 size={15} />
               </button>
-              <button className="cdd-close-btn" onClick={onClose}>
+              <button className="h-8 w-8 rounded-lg border border-border bg-background text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex items-center justify-center" onClick={onClose}>
                 <X size={18} />
               </button>
             </div>

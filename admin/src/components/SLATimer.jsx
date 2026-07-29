@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, AlertTriangle, ShieldCheck, Zap } from 'lucide-react';
 import './SLATimer.css';
+import { Clock, AlertTriangle, ShieldCheck, Zap } from 'lucide-react';
 
 export const SLATimer = ({ createdAt, firstCallTime, status }) => {
   const [now, setNow] = useState(new Date());

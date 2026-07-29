@@ -1,36 +1,18 @@
 import { Link, useLocation } from 'react-router-dom';
-import { motion as Motion } from 'framer-motion';
+import './MobileBottomNav.css';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard,
-  ShoppingCart,
-  Headphones,
-  Truck,
-  Megaphone,
-  ClipboardList,
-  BarChart3,
-  ShieldCheck,
-  Package,
-  Factory,
-  Users,
-  MoreHorizontal,
-  Download,
-  Share2,
-  PlusSquare,
-  Store
+  LayoutDashboard, ShoppingCart, Headphones, Truck, Megaphone, ClipboardList,
+  BarChart3, ShieldCheck, Package, Factory, Users, MoreHorizontal, Download,
+  Share2, PlusSquare, Store, X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
 import { usePwaInstall } from '../context/PwaInstallContext';
 import { isNativeApp } from '../platform/runtime';
-import { Button } from './Button';
 import { Modal } from './Modal';
-import './MobileBottomNav.css';
+import { cn } from '../lib/utils';
 
-/**
- * MobileBottomNav — Fixed bottom navigation bar for mobile screens.
- * Shows the most relevant routes based on user role.
- * Always shows max 5 tabs (overflow handled by a "More" sheet).
- */
 export const MobileBottomNav = () => {
   const { hasAnyRole } = useAuth();
   const location = useLocation();
@@ -40,196 +22,235 @@ export const MobileBottomNav = () => {
   const showInstallAction = !isNativeApp();
 
   const allItems = [
-    { path: '/',                label: 'Overview',   icon: LayoutDashboard, roles: null },
-    { path: '/orders',          label: 'Orders',     icon: ShoppingCart,    roles: null },
-    { path: '/storefront',      label: 'Storefront', icon: Store,           roles: ['Admin'] },
-    { path: '/call-team',       label: 'Calls',      icon: Headphones,      roles: ['Admin', 'Call Team'] },
-    { path: '/moderator',       label: 'Moderator',  icon: ShieldCheck,     roles: ['Admin', 'Moderator'] },
-    { path: '/steadfast',       label: 'Courier Hub',icon: Truck,           roles: ['Admin', 'Courier Team', 'Moderator'] },
-    { path: '/factory',         label: 'Confirmed',  icon: Factory,         roles: ['Admin', 'Factory Team'] },
-    { path: '/inventory',       label: 'Inventory',  icon: Package,         roles: ['Admin', 'Moderator'] },
-    { path: '/digital-marketer',label: 'Marketing',  icon: Megaphone,       roles: ['Admin', 'Digital Marketer'] },
-    { path: '/tasks',           label: 'Tasks',      icon: ClipboardList,   roles: null },
-    { path: '/reports',         label: 'Analytics',  icon: BarChart3,       roles: ['Admin'] },
-    { path: '/users',           label: 'Users',      icon: Users,           roles: ['Admin'] },
+    { path: '/',                 label: 'Overview',    icon: LayoutDashboard, roles: null },
+    { path: '/orders',           label: 'Orders',      icon: ShoppingCart,    roles: null },
+    { path: '/storefront',       label: 'Storefront',  icon: Store,           roles: ['Admin'] },
+    { path: '/call-team',        label: 'Calls',       icon: Headphones,      roles: ['Admin', 'Call Team'] },
+    { path: '/moderator',        label: 'Moderator',   icon: ShieldCheck,     roles: ['Admin', 'Moderator'] },
+    { path: '/steadfast',        label: 'Courier Hub', icon: Truck,           roles: ['Admin', 'Courier Team', 'Moderator'] },
+    { path: '/factory',          label: 'Confirmed',   icon: Factory,         roles: ['Admin', 'Factory Team'] },
+    { path: '/inventory',        label: 'Inventory',   icon: Package,         roles: ['Admin', 'Moderator'] },
+    { path: '/digital-marketer', label: 'Marketing',   icon: Megaphone,       roles: ['Admin', 'Digital Marketer'] },
+    { path: '/tasks',            label: 'Tasks',       icon: ClipboardList,   roles: null },
+    { path: '/reports',          label: 'Analytics',   icon: BarChart3,       roles: ['Admin'] },
+    { path: '/users',            label: 'Users',       icon: Users,           roles: ['Admin'] },
   ];
 
-  // Filter by role
-  const visibleItems = allItems.filter(item =>
-    !item.roles || hasAnyRole(item.roles)
-  );
+  const visibleItems = allItems.filter(item => !item.roles || hasAnyRole(item.roles));
+  const primaryItems = visibleItems.slice(0, 4);
+  const overflowItems = visibleItems.slice(4);
+  const hasOverflow = overflowItems.length > 0;
+  const isActive = (path) => location.pathname === path;
+  const isOverflowActive = overflowItems.some(item => isActive(item.path));
 
   const handleInstallClick = async () => {
-    if (isInstalled) {
-      return;
-    }
-
-    if (installMethod === 'manual-ios') {
-      setIsInstallHelpOpen(true);
-      return;
-    }
-
-    if (!canInstall) {
-      return;
-    }
-
+    if (isInstalled) return;
+    if (installMethod === 'manual-ios') { setIsInstallHelpOpen(true); return; }
+    if (!canInstall) return;
     await promptInstall();
     setIsMoreOpen(false);
   };
 
-  // Show first 4 items in bar, rest in "More" sheet
-  const primaryItems = visibleItems.slice(0, 4);
-  const overflowItems = visibleItems.slice(4);
-  const hasOverflow = overflowItems.length > 0;
-
-  const isActive = (path) => location.pathname === path;
-  const isOverflowActive = overflowItems.some(item => isActive(item.path));
-
   useEffect(() => {
-    const handleBackButton = (event) => {
-      if (isMoreOpen) {
-        event.preventDefault();
-        setIsMoreOpen(false);
-      }
-    };
-
+    const handleBackButton = (e) => { if (isMoreOpen) { e.preventDefault(); setIsMoreOpen(false); } };
     window.addEventListener('app:backbutton', handleBackButton);
     return () => window.removeEventListener('app:backbutton', handleBackButton);
   }, [isMoreOpen]);
 
   return (
     <>
-      {/* ── Bottom Nav Bar ── */}
-      <nav className="mobile-bottom-nav">
-        {primaryItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item.path);
-          return (
-            <Motion.div key={item.path} whileTap={{ scale: 0.88 }} transition={{ type: 'spring', stiffness: 400, damping: 17 }}>
-              <Link
-                to={item.path}
-                className={`mob-nav-item ${active ? 'active' : ''}`}
-                onClick={() => setIsMoreOpen(false)}
+      {/* Bottom Nav Bar — mobile only */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 flex h-16 items-end border-t border-border bg-card/95 backdrop-blur-xl pb-safe md:hidden">
+        <div className="flex w-full items-center">
+          {primaryItems.map(item => {
+            const Icon = item.icon;
+            const active = isActive(item.path);
+            return (
+              <Motion.div
+                key={item.path}
+                className="flex-1"
+                whileTap={{ scale: 0.88 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 17 }}
               >
-                <div className="mob-nav-icon-wrap">
-                  <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
-                  {active && <Motion.span layoutId="nav-pip" className="mob-nav-pip" transition={{ type: 'spring', stiffness: 350, damping: 25 }} />}
-                </div>
-                <span className="mob-nav-label">{item.label}</span>
-              </Link>
-            </Motion.div>
-          );
-        })}
+                <Link
+                  to={item.path}
+                  onClick={() => setIsMoreOpen(false)}
+                  className="flex flex-col items-center gap-0.5 py-2 w-full"
+                >
+                  <div className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-xl transition-all',
+                    active ? 'bg-primary/15 text-primary' : 'text-muted-foreground'
+                  )}>
+                    <Icon size={20} strokeWidth={active ? 2.5 : 1.8} />
+                  </div>
+                  <span className={cn(
+                    'text-[9px] font-bold tracking-wide',
+                    active ? 'text-primary' : 'text-muted-foreground'
+                  )}>
+                    {item.label}
+                  </span>
+                  {active && (
+                    <Motion.span
+                      layoutId="nav-pip"
+                      className="absolute bottom-1 h-1 w-4 rounded-full bg-primary"
+                      transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                    />
+                  )}
+                </Link>
+              </Motion.div>
+            );
+          })}
 
-        {hasOverflow && (
-          <Motion.div whileTap={{ scale: 0.88 }} transition={{ type: 'spring', stiffness: 400, damping: 17 }}>
-            <button
-              className={`mob-nav-item ${isOverflowActive ? 'active' : ''} ${isMoreOpen ? 'more-open' : ''}`}
-              onClick={() => setIsMoreOpen(prev => !prev)}
-            >
-              <div className="mob-nav-icon-wrap">
-                <MoreHorizontal size={22} strokeWidth={isOverflowActive ? 2.5 : 1.8} />
-                {isOverflowActive && <span className="mob-nav-pip" />}
-              </div>
-              <span className="mob-nav-label">More</span>
-            </button>
-          </Motion.div>
-        )}
+          {hasOverflow && (
+            <Motion.div className="flex-1" whileTap={{ scale: 0.88 }} transition={{ type: 'spring', stiffness: 400, damping: 17 }}>
+              <button
+                onClick={() => setIsMoreOpen(prev => !prev)}
+                className="flex flex-col items-center gap-0.5 py-2 w-full"
+              >
+                <div className={cn(
+                  'flex h-8 w-8 items-center justify-center rounded-xl transition-all',
+                  (isOverflowActive || isMoreOpen) ? 'bg-primary/15 text-primary' : 'text-muted-foreground'
+                )}>
+                  <MoreHorizontal size={20} strokeWidth={1.8} />
+                </div>
+                <span className={cn(
+                  'text-[9px] font-bold tracking-wide',
+                  (isOverflowActive || isMoreOpen) ? 'text-primary' : 'text-muted-foreground'
+                )}>
+                  More
+                </span>
+              </button>
+            </Motion.div>
+          )}
+        </div>
       </nav>
 
-      {/* ── More Sheet Overlay ── */}
-      {isMoreOpen && (
-        <>
-          <div
-            className="mob-more-overlay"
-            onClick={() => setIsMoreOpen(false)}
-          />
-          <div className="mob-more-sheet">
-            <div className="mob-more-handle" />
-            <p className="mob-more-title">More Sections</p>
-            <div className={`mob-more-grid ${showInstallAction ? 'has-install' : ''}`}>
-              {overflowItems.map((item) => {
-                const Icon = item.icon;
-                const active = isActive(item.path);
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`mob-more-item ${active ? 'active' : ''}`}
-                    onClick={() => setIsMoreOpen(false)}
-                  >
-                    <div className="mob-more-icon-box">
-                      <Icon size={20} strokeWidth={2} />
-                    </div>
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-              {showInstallAction ? (
+      {/* More Sheet */}
+      <AnimatePresence>
+        {isMoreOpen && (
+          <>
+            {/* Overlay */}
+            <Motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
+              onClick={() => setIsMoreOpen(false)}
+            />
+            {/* Sheet */}
+            <Motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-border bg-card pb-safe md:hidden"
+            >
+              {/* Handle */}
+              <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-border" />
+              <div className="flex items-center justify-between px-5 py-3">
+                <p className="text-sm font-display font-bold text-foreground">More Sections</p>
                 <button
-                  type="button"
-                  className={`mob-more-item mob-more-install ${(canInstall || canManualInstall) ? 'install-ready' : ''} ${isInstalled ? 'is-installed' : ''}`}
-                  onClick={handleInstallClick}
-                  disabled={!canInstall && !canManualInstall}
-                  title={isInstalled ? 'App installed' : canManualInstall ? 'Install app on iPhone' : canInstall ? 'Install app' : 'Install not available yet'}
+                  onClick={() => setIsMoreOpen(false)}
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary transition-colors"
                 >
-                  <div className="mob-more-icon-box mob-more-icon-box-install">
-                    <Download size={20} strokeWidth={2.2} />
-                  </div>
-                  <span>{isInstalled ? 'Installed' : 'Install App'}</span>
+                  <X size={14} />
                 </button>
-              ) : null}
-            </div>
-          </div>
-        </>
-      )}
+              </div>
+              <div className="grid grid-cols-4 gap-2 px-4 pb-6">
+                {overflowItems.map(item => {
+                  const Icon = item.icon;
+                  const active = isActive(item.path);
+                  return (
+                    <Link key={item.path} to={item.path}
+                      onClick={() => setIsMoreOpen(false)}
+                      className={cn(
+                        'flex flex-col items-center gap-1.5 rounded-2xl p-3 transition-all',
+                        active ? 'bg-primary/10' : 'hover:bg-secondary'
+                      )}
+                    >
+                      <div className={cn(
+                        'flex h-10 w-10 items-center justify-center rounded-xl',
+                        active ? 'bg-primary/20 text-primary' : 'bg-secondary text-muted-foreground'
+                      )}>
+                        <Icon size={18} strokeWidth={2} />
+                      </div>
+                      <span className={cn('text-[9px] font-bold text-center leading-tight', active ? 'text-primary' : 'text-muted-foreground')}>
+                        {item.label}
+                      </span>
+                    </Link>
+                  );
+                })}
 
+                {showInstallAction && (
+                  <button
+                    type="button"
+                    onClick={handleInstallClick}
+                    disabled={!canInstall && !canManualInstall}
+                    className={cn(
+                      'flex flex-col items-center gap-1.5 rounded-2xl p-3 transition-all disabled:opacity-40',
+                      (canInstall || canManualInstall) ? 'hover:bg-secondary' : ''
+                    )}
+                  >
+                    <div className={cn(
+                      'flex h-10 w-10 items-center justify-center rounded-xl',
+                      isInstalled ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40' : 'bg-secondary text-muted-foreground'
+                    )}>
+                      <Download size={18} strokeWidth={2.2} />
+                    </div>
+                    <span className="text-[9px] font-bold text-muted-foreground text-center leading-tight">
+                      {isInstalled ? 'Installed' : 'Install'}
+                    </span>
+                  </button>
+                )}
+              </div>
+            </Motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* iOS Install Guide Modal */}
       <Modal
         isOpen={isInstallHelpOpen}
         onClose={() => setIsInstallHelpOpen(false)}
         title="Install on iPhone"
         subtitle="Use Safari's share menu to add this app to your Home Screen."
       >
-        <div className="ios-install-guide">
-          <div className="ios-install-guide__hero">
-            <div className="ios-install-guide__hero-icon">
-              <Download size={22} strokeWidth={2.2} />
+        <div className="space-y-4 p-4">
+          <div className="flex items-start gap-3 rounded-2xl bg-secondary p-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Download size={18} />
             </div>
             <div>
-              <strong>Manual PWA install</strong>
-              <p>This works on iPhone even when the browser does not show a direct install prompt.</p>
+              <p className="text-sm font-bold text-foreground">Manual PWA Install</p>
+              <p className="text-xs text-muted-foreground">Works even when browser doesn't show a prompt.</p>
             </div>
           </div>
 
-          <ol className="ios-install-guide__steps">
-            <li>
-              <span className="ios-install-guide__step-icon"><Share2 size={16} /></span>
-              <div>
-                <strong>Tap the Share button</strong>
-                <p>Use Safari's bottom toolbar and open the share sheet.</p>
-              </div>
-            </li>
-            <li>
-              <span className="ios-install-guide__step-icon"><PlusSquare size={16} /></span>
-              <div>
-                <strong>Select “Add to Home Screen”</strong>
-                <p>Scroll the actions list if the option is lower in the sheet.</p>
-              </div>
-            </li>
-            <li>
-              <span className="ios-install-guide__step-icon"><Download size={16} /></span>
-              <div>
-                <strong>Tap “Add”</strong>
-                <p>The app will appear on the Home Screen and run as an installed app.</p>
-              </div>
-            </li>
+          <ol className="space-y-3">
+            {[
+              { icon: <Share2 size={14} />, title: 'Tap the Share button', desc: "Use Safari's bottom toolbar and open the share sheet." },
+              { icon: <PlusSquare size={14} />, title: 'Select "Add to Home Screen"', desc: 'Scroll the actions list if the option is lower in the sheet.' },
+              { icon: <Download size={14} />, title: 'Tap "Add"', desc: 'The app will appear on the Home Screen and run as an installed app.' },
+            ].map((step, i) => (
+              <li key={i} className="flex items-start gap-3">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-black">
+                  {i + 1}
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">{step.title}</p>
+                  <p className="text-xs text-muted-foreground">{step.desc}</p>
+                </div>
+              </li>
+            ))}
           </ol>
 
-          <div className="ios-install-guide__footer">
-            <Button variant="primary" onClick={() => setIsInstallHelpOpen(false)}>
-              Understood
-            </Button>
-          </div>
+          <button
+            onClick={() => setIsInstallHelpOpen(false)}
+            className="mt-2 flex h-11 w-full items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground hover:opacity-90 transition-opacity"
+          >
+            Understood
+          </button>
         </div>
       </Modal>
     </>

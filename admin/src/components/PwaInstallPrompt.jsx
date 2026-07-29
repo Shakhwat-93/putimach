@@ -1,6 +1,6 @@
 import { Download, X } from 'lucide-react';
-import { usePwaInstall } from '../context/PwaInstallContext';
 import './PwaInstallPrompt.css';
+import { usePwaInstall } from '../context/PwaInstallContext';
 
 export const PwaInstallPrompt = () => {
   const {

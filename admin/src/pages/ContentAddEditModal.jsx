@@ -3,9 +3,9 @@
  * Sections: Planning Info | Assignment & Shoot | Drive & Files | Cost & Payment
  */
 import React, { useState, useEffect } from 'react';
+import './ContentAddEditModal.css';
 import { motion } from 'framer-motion';
 import { X, FolderPlus, ChevronDown, ChevronUp } from 'lucide-react';
-import './ContentAddEditModal.css';
 
 const CONTENT_TYPES = ['UGC','Lifestyle','Review','Demo','Hook','Voice Over','Image','Reel','Carousel','Tutorial','Unboxing','Testimonial'];
 const PLATFORMS     = ['Facebook','Instagram','TikTok','YouTube','Website'];
@@ -37,15 +37,15 @@ const EMPTY_FORM = {
 };
 
 const SectionHeader = ({ title, sectionKey, open, onToggle }) => (
-  <button type="button" className="caem-section-header" onClick={() => onToggle(sectionKey)}>
+  <button type="button" className="flex items-center justify-between w-full px-6 py-3 border-b border-t border-border bg-muted/30 text-sm font-bold text-foreground hover:bg-muted/50 transition-colors" onClick={() => onToggle(sectionKey)}>
     <span>{title}</span>
     {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
   </button>
 );
 
 const Field = ({ label, required, children }) => (
-  <div className="caem-field">
-    <label className="caem-label">{label}{required && <span className="caem-required">*</span>}</label>
+  <div className="flex flex-col gap-1.5">
+    <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1">{label}{required && <span className="text-destructive">*</span>}</label>
     {children}
   </div>
 );
@@ -86,28 +86,28 @@ export const ContentAddEditModal = ({ item, inventoryProducts, onSave, onClose, 
     (form.videographer_cost||0) + (form.editing_cost||0) + (form.other_cost||0);
 
   return (
-    <div className="caem-overlay">
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[1200] flex items-center justify-center p-4">
       <motion.div
-        className="caem-modal"
+        className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
         initial={{ y: 24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 24, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 340, damping: 32 }}
       >
         {/* Modal Header */}
-        <div className="caem-header">
-          <div className="caem-header-left">
-            <FolderPlus size={18} className="caem-header-icon" />
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0 bg-muted/20">
+          <div className="flex items-center gap-3">
+            <FolderPlus size={18} className="text-primary shrink-0" />
             <div>
-              <h3 className="caem-header-title">{isEdit ? 'Edit Content Item' : 'Add New Content Item'}</h3>
-              <p className="caem-header-sub">{isEdit ? `Editing: ${item.content_title || item.product_name}` : 'Create a new content production item'}</p>
+              <h3 className="text-base font-bold text-foreground m-0">{isEdit ? 'Edit Content Item' : 'Add New Content Item'}</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">{isEdit ? `Editing: ${item.content_title || item.product_name}` : 'Create a new content production item'}</p>
             </div>
           </div>
-          <button className="caem-close-btn" onClick={onClose}><X size={18} /></button>
+          <button className="h-8 w-8 rounded-lg border border-border bg-background text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:border-destructive/30 flex items-center justify-center transition-colors" onClick={onClose}><X size={18} /></button>
         </div>
 
         {/* Scrollable Form */}
-        <form className="caem-body" onSubmit={handleSubmit}>
+        <form className="flex-1 overflow-y-auto p-0 scrollbar-thin flex flex-col" onSubmit={handleSubmit}>
 
           {/* ── SECTION 1: Planning Information ── */}
           <SectionHeader title="📋 Planning Information" sectionKey="planning" open={open.planning} onToggle={toggle} />

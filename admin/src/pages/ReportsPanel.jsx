@@ -1,32 +1,35 @@
 import { useOrders } from '../context/OrderContext';
+import './ReportsPanel.css';
 import { useAuth } from '../context/AuthContext';
 import { useEffect, useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Card } from '../components/Card';
-import { Button } from '../components/Button';
+import { motion } from 'framer-motion';
 import { DateRangePicker } from '../components/DateRangePicker';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area,
   PieChart, Pie, Cell, 
   BarChart, Bar 
 } from 'recharts';
-import { Download, FileDown, TrendingUp, BarChart2, PieChart as PieChartIcon, Activity, Truck, Clock, AlertCircle, ArrowUpRight, ArrowDownRight, Zap, Megaphone } from 'lucide-react';
+import { Download, FileDown, TrendingUp, BarChart2, PieChart as PieChartIcon, Activity, Truck, AlertCircle, ArrowUpRight, ArrowDownRight, Zap, Megaphone, Loader2 } from 'lucide-react';
 import { analytics } from '../utils/analytics';
 import { deserializeDateRange, usePersistentState } from '../utils/persistentState';
 import { supabase } from '../lib/supabase';
-import './ReportsPanel.css';
+import { cn } from '../lib/utils';
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 
 // ── Custom Tooltip for Premium Charts ──
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="reports-custom-tooltip">
-        <p className="label">{label}</p>
+      <div className="rounded-lg border border-border bg-card p-3 shadow-md">
+        <p className="mb-2 font-semibold text-foreground">{label}</p>
         {payload.map((entry, index) => (
-          <div key={index} className="tooltip-row">
-            <span className="dot" style={{ backgroundColor: entry.color || entry.fill }}></span>
-            <span className="name">{entry.name}:</span>
-            <span className="value">{entry.value}</span>
+          <div key={index} className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+            <span className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color || entry.fill }}></span>
+            <span className="font-medium">{entry.name}:</span>
+            <span className="text-foreground">{entry.value}</span>
           </div>
         ))}
       </div>
@@ -186,7 +189,6 @@ export const ReportsPanel = () => {
 
         if (!reports) { setAdsData([]); return; }
 
-        // Aggregate by date (multiple submitters on same day → sum)
         const byDate = {};
         for (const r of reports) {
           const d = r.report_date;
@@ -227,20 +229,19 @@ export const ReportsPanel = () => {
   const [selectedUser,    setSelectedUser]    = useState('all');
   const [perfView,        setPerfView]        = useState('overview');
 
-  // Helper: create a Date at local midnight (start) or 23:59:59.999 (end) for a day offset
   const mkDay = (off = 0, isStart = true) => {
     const d = new Date();
     d.setDate(d.getDate() + off);
-    // Use local time, not UTC, so BD 12:00 AM is the true boundary
     if (isStart) {
-      d.setHours(0, 0, 0, 0);      // local midnight = 12:00 AM BD
+      d.setHours(0, 0, 0, 0);      
     } else {
-      d.setHours(23, 59, 59, 999); // local end-of-day = 11:59:59 PM BD
+      d.setHours(23, 59, 59, 999); 
     }
     return d;
   };
   const [perfDateRange, setPerfDateRange] = useState({ start: mkDay(0, true), end: mkDay(0, false) });
   const [perfPreset,    setPerfPreset]    = useState('today');
+  
   const applyPerfPreset = (preset) => {
     const map = {
       today:     { start: mkDay(0,true),   end: mkDay(0,false) },
@@ -255,22 +256,14 @@ export const ReportsPanel = () => {
     const fetchUserPerformance = async () => {
       setUserPerfLoading(true);
       try {
-        /**
-         * TIMEZONE FIX:
-         * toISOString() always returns UTC. For BD (UTC+6), local midnight
-         * = UTC previous day 18:00. So we must send the LOCAL time as ISO,
-         * not the UTC-converted value.
-         * We do this by shifting: localISO = UTCtime - tzOffset
-         */
         const toLocalISO = (date) => {
-          const tzOffset = date.getTimezoneOffset() * 60000; // offset in ms
+          const tzOffset = date.getTimezoneOffset() * 60000;
           return new Date(date.getTime() - tzOffset).toISOString();
         };
 
-        const startISO = toLocalISO(perfDateRange.start); // local 00:00:00
-        const endISO   = toLocalISO(perfDateRange.end);   // local 23:59:59.999
+        const startISO = toLocalISO(perfDateRange.start); 
+        const endISO   = toLocalISO(perfDateRange.end);   
 
-        // Fetch STATUS_CHANGE logs from real agents (exclude System bulk ops)
         const { data: logs } = await supabase
           .from('order_activity_logs')
           .select('changed_by_user_name, new_status, timestamp, action_type, order_id')
@@ -285,10 +278,8 @@ export const ReportsPanel = () => {
           return;
         }
 
-        // Collect all unique users
         const allUsers = [...new Set(logs.map(l => l.changed_by_user_name))].filter(Boolean).sort();
 
-        // ── Aggregate by user ──
         const userMap = {};
         for (const l of logs) {
           const u = l.changed_by_user_name || 'Unknown';
@@ -309,7 +300,6 @@ export const ReportsPanel = () => {
           fakeRate:    u.attempted > 0 ? +((u.fake      / u.attempted) * 100).toFixed(1) : 0,
         })).sort((a, b) => b.confirmed - a.confirmed);
 
-        // ── Aggregate by day (for daily view) ──
         const dayMap = {};
         for (const l of logs) {
           const day  = l.timestamp.split('T')[0];
@@ -324,7 +314,6 @@ export const ReportsPanel = () => {
           else if (s.includes('pending')) dayMap[key].pending++;
         }
 
-        // Group by day for chart (all users combined or filtered)
         const dayChartMap = {};
         for (const entry of Object.values(dayMap)) {
           const d = entry.date;
@@ -348,14 +337,12 @@ export const ReportsPanel = () => {
     fetchUserPerformance();
   }, [perfDateRange]);
 
-  // Filtered day data for selected user
   const filteredDayData = useMemo(() => {
     if (!userPerfData?.byDayPerUser) return [];
     const rows = selectedUser === 'all'
       ? userPerfData.byDayPerUser
       : userPerfData.byDayPerUser.filter(r => r.user === selectedUser);
 
-    // Group by date
     const m = {};
     for (const r of rows) {
       if (!m[r.date]) m[r.date] = { name: new Date(r.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }), date: r.date, confirmed: 0, cancelled: 0, fake: 0, attempted: 0 };
@@ -367,7 +354,6 @@ export const ReportsPanel = () => {
     return Object.values(m).sort((a, b) => a.date.localeCompare(b.date));
   }, [userPerfData, selectedUser]);
 
-  // Filtered user table data
   const filteredUserData = useMemo(() => {
     if (!userPerfData?.byUser) return [];
     if (selectedUser === 'all') return userPerfData.byUser;
@@ -375,19 +361,17 @@ export const ReportsPanel = () => {
   }, [userPerfData, selectedUser]);
 
 
-  // Export Orders as CSV
   const handleExportCSV = () => {
     if (!orders || orders.length === 0) return;
     const cleanOrders = orders.filter(o => o.status !== 'Test');
     if (cleanOrders.length === 0) return;
 
-    // Build CSV header and rows
     const headers = ['Order ID', 'Customer Name', 'Phone', 'Product', 'Size', 'Quantity', 'Source', 'Status', 'Amount', 'Date'];
     const csvContent = [
       headers.join(','),
       ...cleanOrders.map(o => [
         o.id,
-        `"${o.customer_name}"`, // Escape commas in name
+        `"${o.customer_name}"`,
         `"${o.phone}"`,
         `"${o.product_name}"`,
         o.size,
@@ -409,10 +393,7 @@ export const ReportsPanel = () => {
     document.body.removeChild(link);
   };
 
-  // Mock download daily report (PDF or similar)
   const handleDownloadReport = () => {
-    // In a real app, this would query a backend endpoint to generate a PDF report.
-    // Here we'll simulate it by triggering a fake download.
     const blob = new Blob(['Daily Sales Report Content'], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -425,110 +406,96 @@ export const ReportsPanel = () => {
 
   return (
     <motion.div 
-      className="reports-panel"
+      className="p-4 md:p-8 space-y-8"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
-      <motion.div className="reports-control-hub-elite" variants={itemVariants}>
-        <div className="hub-info">
-          <div className="hub-title-group">
-            <div className="hub-icon-wrap">
-              <BarChart2 size={24} />
-            </div>
-            <div>
-              <h1>Intelligence Center</h1>
-              <p>Operational health & business performance metrics</p>
-            </div>
+      {/* Page Header */}
+      <motion.div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between" variants={itemVariants}>
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <BarChart2 size={24} />
+          </div>
+          <div>
+            <h1 className="font-display text-2xl font-bold text-foreground">Intelligence Center</h1>
+            <p className="text-sm text-muted-foreground">Operational health & business performance metrics</p>
           </div>
         </div>
-
-        <div className="hub-actions">
-          <div className="hub-picker-wrap">
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
-          </div>
-          <div className="hub-button-group">
-            <button className="hub-btn secondary" onClick={handleExportCSV}>
-              <FileDown size={18} /> <span>CSV</span>
-            </button>
-            <button className="hub-btn primary" onClick={handleDownloadReport}>
-              <Download size={18} /> <span>Full Report</span>
-            </button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <DateRangePicker value={dateRange} onChange={setDateRange} />
+          <div className="flex items-center gap-2">
+            <Button variant="outline" className="rounded-full" onClick={handleExportCSV}>
+              <FileDown className="mr-2 h-4 w-4" /> CSV
+            </Button>
+            <Button className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleDownloadReport}>
+              <Download className="mr-2 h-4 w-4" /> Full Report
+            </Button>
           </div>
         </div>
       </motion.div>
 
-      {/* ═══════════════════════════════════════════════════
-          AGENT PERFORMANCE INTELLIGENCE
-      ═══════════════════════════════════════════════════ */}
-      <motion.div className="uperf-section" variants={itemVariants}>
-
-        {/* ── Title Row ── */}
-        <div className="uperf-title-row">
-          <div className="section-header-elite" style={{ flex: 1 }}>
-            <div className="heartbeat-pulse uperf-pulse">
-              <Activity size={14} fill="currentColor" />
+      {/* AGENT PERFORMANCE INTELLIGENCE */}
+      <motion.div className="rounded-2xl border border-border bg-card p-5 shadow-sm animate-slide-up" variants={itemVariants}>
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Activity size={16} />
             </div>
-            <h3>Agent Performance Intelligence</h3>
-            <span className="uperf-badge">Live Tracking</span>
+            <h3 className="font-display text-lg font-bold">Agent Performance Intelligence</h3>
+            <Badge variant="secondary" className="ml-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">Live Tracking</Badge>
           </div>
         </div>
 
-        {/* ── Filter Bar: Date Presets + Custom Range + View Toggle + Agent Select ── */}
-        <div className="uperf-filter-bar">
-
-          {/* Quick presets */}
-          <div className="uperf-presets">
-            {[
-              { key: 'today',     label: 'Today' },
-              { key: 'yesterday', label: 'Yesterday' },
-              { key: '7d',        label: '7 Days' },
-              { key: '30d',       label: '30 Days' },
-            ].map(p => (
-              <button
-                key={p.key}
-                className={`uperf-preset-btn ${perfPreset === p.key ? 'active' : ''}`}
-                onClick={() => applyPerfPreset(p.key)}
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-xl bg-secondary/50 p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            {['today', 'yesterday', '7d', '30d'].map(preset => (
+              <Button 
+                key={preset} 
+                variant={perfPreset === preset ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => applyPerfPreset(preset)}
+                className="rounded-full capitalize"
               >
-                {p.label}
-              </button>
+                {preset === '7d' ? '7 Days' : preset === '30d' ? '30 Days' : preset}
+              </Button>
             ))}
-          </div>
-
-          {/* Custom date inputs */}
-          <div className="uperf-date-inputs">
-            <input
-              type="date"
-              className="uperf-date-input"
-              value={perfDateRange.start.toISOString().split('T')[0]}
-              onChange={e => {
-                const d = new Date(e.target.value); d.setHours(0,0,0,0);
-                setPerfDateRange(r => ({ ...r, start: d }));
-                setPerfPreset('custom');
-              }}
-            />
-            <span className="uperf-date-sep">→</span>
-            <input
-              type="date"
-              className="uperf-date-input"
-              value={perfDateRange.end.toISOString().split('T')[0]}
-              onChange={e => {
-                const d = new Date(e.target.value); d.setHours(23,59,59,999);
-                setPerfDateRange(r => ({ ...r, end: d }));
-                setPerfPreset('custom');
-              }}
-            />
-          </div>
-
-          <div className="uperf-filter-right">
-            {/* View Toggle */}
-            <div className="uperf-view-toggle">
-              <button className={`uperf-toggle-btn ${perfView === 'overview' ? 'active' : ''}`} onClick={() => setPerfView('overview')}>Overview</button>
-              <button className={`uperf-toggle-btn ${perfView === 'daily' ? 'active' : ''}`}    onClick={() => setPerfView('daily')}>Day-wise</button>
+            <div className="flex items-center gap-2 border-l border-border pl-2 ml-2">
+              <input
+                type="date"
+                className="rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                value={perfDateRange.start.toISOString().split('T')[0]}
+                onChange={e => {
+                  const d = new Date(e.target.value); d.setHours(0,0,0,0);
+                  setPerfDateRange(r => ({ ...r, start: d }));
+                  setPerfPreset('custom');
+                }}
+              />
+              <span className="text-muted-foreground">→</span>
+              <input
+                type="date"
+                className="rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                value={perfDateRange.end.toISOString().split('T')[0]}
+                onChange={e => {
+                  const d = new Date(e.target.value); d.setHours(23,59,59,999);
+                  setPerfDateRange(r => ({ ...r, end: d }));
+                  setPerfPreset('custom');
+                }}
+              />
             </div>
-
-            {/* Agent select */}
-            <select className="uperf-user-select" value={selectedUser} onChange={e => setSelectedUser(e.target.value)}>
+          </div>
+          <div className="flex items-center gap-3">
+            <Tabs value={perfView} onValueChange={setPerfView}>
+              <TabsList className="bg-background">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="daily">Day-wise</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <select 
+              className="rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              value={selectedUser} 
+              onChange={e => setSelectedUser(e.target.value)}
+            >
               <option value="all">All Agents</option>
               {(userPerfData?.allUsers || []).map(u => (
                 <option key={u} value={u}>{u}</option>
@@ -538,171 +505,177 @@ export const ReportsPanel = () => {
         </div>
 
         {userPerfLoading ? (
-          <div className="ads-loading-state">
-            <div className="ads-loader-spin" />
-            <span>Loading agent performance data...</span>
+          <div className="flex h-40 flex-col items-center justify-center text-muted-foreground">
+            <Loader2 className="mb-2 h-8 w-8 animate-spin" />
+            <p>Loading agent performance data...</p>
           </div>
         ) : !userPerfData || userPerfData.byUser.length === 0 ? (
-          <div className="ads-empty-state">
-            <Activity size={28} />
-            <p>No performance data found for the selected period.</p>
-            <span>Agent activity logs will appear here as orders are processed.</span>
+          <div className="flex h-40 flex-col items-center justify-center text-muted-foreground text-center">
+            <Activity className="mb-2 h-10 w-10 opacity-50" />
+            <p className="font-medium text-foreground">No performance data found.</p>
+            <p className="text-sm">Agent activity logs will appear here as orders are processed.</p>
           </div>
         ) : (
           <>
-            {/* ── OVERVIEW: Summary cards + Leaderboard ── */}
             {perfView === 'overview' && (
               <>
-                {/* Per-agent summary cards */}
-                <div className="uperf-cards-grid">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-6">
                   {filteredUserData.map(u => (
-                    <div key={u.name} className={`uperf-agent-card ${selectedUser === u.name ? 'selected' : ''}`}
-                      onClick={() => setSelectedUser(selectedUser === u.name ? 'all' : u.name)}>
-                      <div className="uperf-agent-avatar">
-                        {u.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="uperf-agent-info">
-                        <span className="uperf-agent-name">{u.name}</span>
-                        <span className="uperf-agent-total">{u.attempted} total actions</span>
-                      </div>
-                      <div className="uperf-agent-stats">
-                        <div className="uperf-mini-stat confirmed">
-                          <span>{u.confirmed}</span>
-                          <label>Confirmed</label>
+                    <div 
+                      key={u.name} 
+                      className={cn(
+                        "cursor-pointer rounded-xl border p-4 transition-all hover:border-primary/50",
+                        selectedUser === u.name ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border bg-background"
+                      )}
+                      onClick={() => setSelectedUser(selectedUser === u.name ? 'all' : u.name)}
+                    >
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
+                          {u.name.charAt(0).toUpperCase()}
                         </div>
-                        <div className="uperf-mini-stat cancelled">
-                          <span>{u.cancelled}</span>
-                          <label>Cancelled</label>
-                        </div>
-                        <div className="uperf-mini-stat fake">
-                          <span>{u.fake}</span>
-                          <label>Fake</label>
+                        <div>
+                          <p className="font-semibold text-foreground">{u.name}</p>
+                          <p className="text-xs text-muted-foreground">{u.attempted} total actions</p>
                         </div>
                       </div>
-                      <div className="uperf-confirm-rate">
-                        <span className="uperf-rate-val">{u.confirmRate}%</span>
-                        <label>Confirm Rate</label>
-                        <div className="uperf-rate-bar">
-                          <div className="uperf-rate-fill confirmed" style={{ width: `${u.confirmRate}%` }} />
+                      
+                      <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+                        <div className="rounded-lg bg-emerald-500/10 p-2">
+                          <p className="font-bold text-emerald-600">{u.confirmed}</p>
+                          <p className="text-[10px] text-emerald-600/80 uppercase tracking-wider">Confirmed</p>
                         </div>
+                        <div className="rounded-lg bg-rose-500/10 p-2">
+                          <p className="font-bold text-rose-600">{u.cancelled}</p>
+                          <p className="text-[10px] text-rose-600/80 uppercase tracking-wider">Cancelled</p>
+                        </div>
+                        <div className="rounded-lg bg-orange-500/10 p-2">
+                          <p className="font-bold text-orange-600">{u.fake}</p>
+                          <p className="text-[10px] text-orange-600/80 uppercase tracking-wider">Fake</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-foreground">Confirm Rate</span>
+                        <span className="font-bold text-emerald-600">{u.confirmRate}%</span>
+                      </div>
+                      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-secondary">
+                        <div className="h-full bg-emerald-500 transition-all" style={{ width: `${u.confirmRate}%` }} />
                       </div>
                     </div>
                   ))}
                 </div>
 
-                {/* Leaderboard table */}
-                <div className="uperf-leaderboard">
-                  <div className="uperf-lb-head">
-                    <span>Rank</span>
-                    <span>Agent</span>
-                    <span>Attempted</span>
-                    <span>✅ Confirmed</span>
-                    <span>❌ Cancelled</span>
-                    <span>🚫 Fake</span>
-                    <span>⏳ Pending</span>
-                    <span>Confirm %</span>
-                    <span>Cancel %</span>
-                    <span>Fake %</span>
-                  </div>
-                  {filteredUserData.map((u, i) => (
-                    <div key={u.name} className={`uperf-lb-row ${i === 0 && selectedUser === 'all' ? 'top-performer' : ''}`}>
-                      <span className="uperf-rank">
-                        {selectedUser === 'all' ? (i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`) : '—'}
-                      </span>
-                      <span className="uperf-lb-name">{u.name}</span>
-                      <span className="uperf-lb-num">{u.attempted}</span>
-                      <span className="uperf-lb-num green">{u.confirmed}</span>
-                      <span className="uperf-lb-num red">{u.cancelled}</span>
-                      <span className="uperf-lb-num orange">{u.fake}</span>
-                      <span className="uperf-lb-num blue">{u.pending}</span>
-                      <span className={`uperf-rate-pill ${u.confirmRate >= 50 ? 'good' : 'warn'}`}>{u.confirmRate}%</span>
-                      <span className={`uperf-rate-pill ${u.cancelRate > 30 ? 'bad' : 'neutral'}`}>{u.cancelRate}%</span>
-                      <span className={`uperf-rate-pill ${u.fakeRate > 15 ? 'bad' : 'neutral'}`}>{u.fakeRate}%</span>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto rounded-xl border border-border">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-secondary/50 text-muted-foreground border-b border-border">
+                      <tr>
+                        <th className="p-3 font-medium">Rank</th>
+                        <th className="p-3 font-medium">Agent</th>
+                        <th className="p-3 font-medium">Attempted</th>
+                        <th className="p-3 font-medium text-emerald-600">✅ Confirmed</th>
+                        <th className="p-3 font-medium text-rose-600">❌ Cancelled</th>
+                        <th className="p-3 font-medium text-orange-600">🚫 Fake</th>
+                        <th className="p-3 font-medium text-blue-600">⏳ Pending</th>
+                        <th className="p-3 font-medium">Confirm %</th>
+                        <th className="p-3 font-medium">Cancel %</th>
+                        <th className="p-3 font-medium">Fake %</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {filteredUserData.map((u, i) => (
+                        <tr key={u.name} className="hover:bg-secondary/20">
+                          <td className="p-3 text-lg">
+                            {selectedUser === 'all' ? (i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`) : '—'}
+                          </td>
+                          <td className="p-3 font-medium text-foreground">{u.name}</td>
+                          <td className="p-3 font-medium">{u.attempted}</td>
+                          <td className="p-3 font-semibold text-emerald-600">{u.confirmed}</td>
+                          <td className="p-3 font-semibold text-rose-600">{u.cancelled}</td>
+                          <td className="p-3 font-semibold text-orange-600">{u.fake}</td>
+                          <td className="p-3 font-semibold text-blue-600">{u.pending}</td>
+                          <td className="p-3">
+                            <Badge variant="outline" className={u.confirmRate >= 50 ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-orange-200 bg-orange-50 text-orange-700'}>
+                              {u.confirmRate}%
+                            </Badge>
+                          </td>
+                          <td className="p-3">
+                            <Badge variant="outline" className={u.cancelRate > 30 ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-border text-muted-foreground'}>
+                              {u.cancelRate}%
+                            </Badge>
+                          </td>
+                          <td className="p-3">
+                            <Badge variant="outline" className={u.fakeRate > 15 ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-border text-muted-foreground'}>
+                              {u.fakeRate}%
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </>
             )}
 
-            {/* ── DAILY VIEW: Stacked bar chart + day table ── */}
             {perfView === 'daily' && (
               <>
-                {/* Stacked bar chart */}
-                <div className="uperf-chart-wrap">
+                <div className="mb-6 rounded-xl border border-border bg-background p-4">
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={filteredDayData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(13, 148, 136,0.05)" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false}
-                        tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false}
-                        tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} />
-                      <Tooltip
-                        content={({ active, payload, label }) => {
-                          if (!active || !payload?.length) return null;
-                          return (
-                            <div className="ads-custom-tooltip">
-                              <p className="ads-tt-date">{label}</p>
-                              {payload.map((p, i) => (
-                                <div key={i} className="ads-tt-row">
-                                  <span className="ads-tt-dot" style={{ background: p.fill }} />
-                                  <span>{p.name}:</span>
-                                  <strong>{p.value}</strong>
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        }}
-                      />
-                      <Bar dataKey="confirmed" name="Confirmed" stackId="a" fill="#10b981" radius={[0,0,0,0]} />
-                      <Bar dataKey="cancelled" name="Cancelled" stackId="a" fill="#ef4444" radius={[0,0,0,0]} />
-                      <Bar dataKey="fake"      name="Fake"      stackId="a" fill="#f59e0b" radius={[6,6,0,0]} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted-foreground)', fontSize: 11 }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted-foreground)', fontSize: 11 }} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar dataKey="confirmed" name="Confirmed" stackId="a" fill="#10b981" />
+                      <Bar dataKey="cancelled" name="Cancelled" stackId="a" fill="#f43f5e" />
+                      <Bar dataKey="fake" name="Fake" stackId="a" fill="#f97316" radius={[6,6,0,0]} />
                     </BarChart>
                   </ResponsiveContainer>
-                  <div className="ads-chart-legend">
-                    <span><i style={{ background: '#10b981' }} />Confirmed</span>
-                    <span><i style={{ background: '#ef4444' }} />Cancelled</span>
-                    <span><i style={{ background: '#f59e0b' }} />Fake</span>
+                  <div className="mt-4 flex justify-center gap-6 text-sm font-medium">
+                    <span className="flex items-center gap-2"><div className="h-3 w-3 rounded-sm bg-[#10b981]" />Confirmed</span>
+                    <span className="flex items-center gap-2"><div className="h-3 w-3 rounded-sm bg-[#f43f5e]" />Cancelled</span>
+                    <span className="flex items-center gap-2"><div className="h-3 w-3 rounded-sm bg-[#f97316]" />Fake</span>
                   </div>
                 </div>
 
-                {/* Day-wise detail table */}
-                <div className="uperf-day-table">
-                  <div className="uperf-day-head">
-                    <span>Date</span>
-                    {selectedUser === 'all' && <span>Agent</span>}
-                    <span>Attempted</span>
-                    <span>✅ Confirmed</span>
-                    <span>❌ Cancelled</span>
-                    <span>🚫 Fake</span>
-                    <span>⏳ Pending</span>
-                    <span>Confirm %</span>
-                  </div>
-                  {(selectedUser === 'all'
-                    ? // Show per-user breakdown per day
-                      (userPerfData?.byDayPerUser || [])
-                        .sort((a, b) => b.date.localeCompare(a.date) || a.user.localeCompare(b.user))
-                    : (userPerfData?.byDayPerUser || [])
-                        .filter(r => r.user === selectedUser)
-                        .sort((a, b) => b.date.localeCompare(a.date))
-                  ).map((row, i) => {
-                    const rate = row.attempted > 0 ? +((row.confirmed / row.attempted) * 100).toFixed(1) : 0;
-                    return (
-                      <div key={`${row.date}-${row.user}-${i}`} className="uperf-day-row">
-                        <span className="uperf-day-date">
-                          {new Date(row.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                        </span>
-                        {selectedUser === 'all' && (
-                          <span className="uperf-day-user">{row.user}</span>
-                        )}
-                        <span>{row.attempted}</span>
-                        <span className="uperf-lb-num green">{row.confirmed}</span>
-                        <span className="uperf-lb-num red">{row.cancelled}</span>
-                        <span className="uperf-lb-num orange">{row.fake}</span>
-                        <span className="uperf-lb-num blue">{row.pending}</span>
-                        <span className={`uperf-rate-pill ${rate >= 50 ? 'good' : 'warn'}`}>{rate}%</span>
-                      </div>
-                    );
-                  })}
+                <div className="overflow-x-auto rounded-xl border border-border">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-secondary/50 text-muted-foreground border-b border-border">
+                      <tr>
+                        <th className="p-3 font-medium">Date</th>
+                        {selectedUser === 'all' && <th className="p-3 font-medium">Agent</th>}
+                        <th className="p-3 font-medium">Attempted</th>
+                        <th className="p-3 font-medium text-emerald-600">✅ Confirmed</th>
+                        <th className="p-3 font-medium text-rose-600">❌ Cancelled</th>
+                        <th className="p-3 font-medium text-orange-600">🚫 Fake</th>
+                        <th className="p-3 font-medium text-blue-600">⏳ Pending</th>
+                        <th className="p-3 font-medium">Confirm %</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {(selectedUser === 'all'
+                        ? (userPerfData?.byDayPerUser || []).sort((a, b) => b.date.localeCompare(a.date) || a.user.localeCompare(b.user))
+                        : (userPerfData?.byDayPerUser || []).filter(r => r.user === selectedUser).sort((a, b) => b.date.localeCompare(a.date))
+                      ).map((row, i) => {
+                        const rate = row.attempted > 0 ? +((row.confirmed / row.attempted) * 100).toFixed(1) : 0;
+                        return (
+                          <tr key={`${row.date}-${row.user}-${i}`} className="hover:bg-secondary/20">
+                            <td className="p-3 font-medium">{new Date(row.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</td>
+                            {selectedUser === 'all' && <td className="p-3 font-medium text-foreground">{row.user}</td>}
+                            <td className="p-3 font-medium">{row.attempted}</td>
+                            <td className="p-3 font-semibold text-emerald-600">{row.confirmed}</td>
+                            <td className="p-3 font-semibold text-rose-600">{row.cancelled}</td>
+                            <td className="p-3 font-semibold text-orange-600">{row.fake}</td>
+                            <td className="p-3 font-semibold text-blue-600">{row.pending}</td>
+                            <td className="p-3">
+                              <Badge variant="outline" className={rate >= 50 ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-orange-200 bg-orange-50 text-orange-700'}>
+                                {rate}%
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </>
             )}
@@ -710,160 +683,129 @@ export const ReportsPanel = () => {
         )}
       </motion.div>
 
-      <div className="reports-grid-elite">
-        {velocityMetrics && (
-          <motion.div className="operational-heartbeat-elite" variants={itemVariants}>
-            <div className="section-header-elite">
-              <div className="heartbeat-pulse">
-                <Zap size={14} fill="currentColor" />
-              </div>
-              <h3>Live Operational Heartbeat</h3>
+      {velocityMetrics && (
+        <motion.div className="rounded-2xl border border-border bg-card p-5 shadow-sm animate-slide-up" variants={itemVariants}>
+          <div className="mb-6 flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Zap size={16} />
             </div>
-            
-            <div className="velocity-grid-elite">
-              <div className="velocity-card-elite glass">
-                <div className="v-card-top">
-                  <span className="label">System Latency (Conf → Factory)</span>
-                  <div className={`v-trend ${velocityMetrics.avgConfirmedToFactory < 8 ? 'positive' : 'negative'}`}>
-                    {velocityMetrics.avgConfirmedToFactory < 8 ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
-                    <span>{velocityMetrics.avgConfirmedToFactory < 8 ? '-12%' : '+5%'}</span>
-                  </div>
-                </div>
-                <div className="v-value-group">
-                  <div className="value">
-                    {velocityMetrics.avgConfirmedToFactory}
-                    <span className="unit">h</span>
-                  </div>
-                  <div className={`status-pill ${velocityMetrics.avgConfirmedToFactory < 8 ? 'healthy' : 'warn'}`}>
-                    {velocityMetrics.avgConfirmedToFactory < 8 ? 'Optimum' : 'Optimizing'}
-                  </div>
+            <h3 className="font-display text-lg font-bold">Live Operational Heartbeat</h3>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3 mb-6">
+            <div className="rounded-xl border border-border bg-background p-4">
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="font-medium text-muted-foreground">System Latency (Conf → Factory)</span>
+                <div className={cn("flex items-center gap-1 text-xs font-medium", velocityMetrics.avgConfirmedToFactory < 8 ? "text-emerald-500" : "text-rose-500")}>
+                  {velocityMetrics.avgConfirmedToFactory < 8 ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
+                  <span>{velocityMetrics.avgConfirmedToFactory < 8 ? '-12%' : '+5%'}</span>
                 </div>
               </div>
-
-              <div className="velocity-card-elite glass">
-                <div className="v-card-top">
-                  <span className="label">Processing Pipeline (Factory → Courier)</span>
-                  <div className={`v-trend ${velocityMetrics.avgFactoryToCourier < 18 ? 'positive' : 'negative'}`}>
-                    {velocityMetrics.avgFactoryToCourier < 18 ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
-                    <span>{velocityMetrics.avgFactoryToCourier < 18 ? '-8%' : '+15%'}</span>
-                  </div>
+              <div className="flex items-end justify-between">
+                <div className="text-2xl font-bold text-foreground">
+                  {velocityMetrics.avgConfirmedToFactory} <span className="text-sm font-normal text-muted-foreground">h</span>
                 </div>
-                <div className="v-value-group">
-                  <div className="value">
-                    {velocityMetrics.avgFactoryToCourier}
-                    <span className="unit">h</span>
-                  </div>
-                  <div className={`status-pill ${velocityMetrics.avgFactoryToCourier < 18 ? 'healthy' : 'warn'}`}>
-                    {velocityMetrics.avgFactoryToCourier < 18 ? 'Fluid' : 'Capacity Full'}
-                  </div>
-                </div>
-              </div>
-
-              <div className="velocity-card-elite glass">
-                <div className="v-card-top">
-                  <span className="label">Total Intelligence Assets</span>
-                </div>
-                <div className="v-value-group">
-                  <div className="value">{velocityMetrics.totalOrdersProcessed}</div>
-                  <div className="status-pill blue">Verified Logs</div>
-                </div>
+                <Badge variant={velocityMetrics.avgConfirmedToFactory < 8 ? 'default' : 'destructive'} className={velocityMetrics.avgConfirmedToFactory < 8 ? 'bg-emerald-500 hover:bg-emerald-600' : ''}>
+                  {velocityMetrics.avgConfirmedToFactory < 8 ? 'Optimum' : 'Optimizing'}
+                </Badge>
               </div>
             </div>
 
-            {velocityMetrics.bottlenecks.length > 0 && (
-              <div className="bottlenecks-section">
-                {velocityMetrics.bottlenecks.map((bottleneck, idx) => (
-                  <div key={idx} className={`bottleneck-alert ${bottleneck.severity}`}>
-                    <div className="icon-wrap">
-                      <AlertCircle size={20} />
-                    </div>
-                    <div className="content">
-                      <div className="title">Bottleneck Detected: {bottleneck.stage}</div>
-                      <div className="msg">{bottleneck.message}</div>
-                    </div>
-                  </div>
-                ))}
+            <div className="rounded-xl border border-border bg-background p-4">
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="font-medium text-muted-foreground">Processing Pipeline (Factory → Courier)</span>
+                <div className={cn("flex items-center gap-1 text-xs font-medium", velocityMetrics.avgFactoryToCourier < 18 ? "text-emerald-500" : "text-rose-500")}>
+                  {velocityMetrics.avgFactoryToCourier < 18 ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
+                  <span>{velocityMetrics.avgFactoryToCourier < 18 ? '-8%' : '+15%'}</span>
+                </div>
               </div>
-            )}
-          </motion.div>
-        )}
-
-        <motion.div className="main-chart-card-elite glass" variants={itemVariants}>
-          <div className="chart-header-elite">
-            <div className="chart-title-hub">
-              <TrendingUp className="chart-icon" size={20} />
-              <div>
-                <h3>Growth Trajectory</h3>
-                <p>Order volume trend analysis</p>
+              <div className="flex items-end justify-between">
+                <div className="text-2xl font-bold text-foreground">
+                  {velocityMetrics.avgFactoryToCourier} <span className="text-sm font-normal text-muted-foreground">h</span>
+                </div>
+                <Badge variant={velocityMetrics.avgFactoryToCourier < 18 ? 'default' : 'destructive'} className={velocityMetrics.avgFactoryToCourier < 18 ? 'bg-emerald-500 hover:bg-emerald-600' : ''}>
+                  {velocityMetrics.avgFactoryToCourier < 18 ? 'Fluid' : 'Capacity Full'}
+                </Badge>
               </div>
             </div>
-            <div className="chart-stats-mini">
-              <div className="mini-stat">
-                <span className="lv">Peak Vol</span>
-                <span className="vv">142</span>
-              </div>
-              <div className="mini-stat">
-                <span className="lv">Avg Vol</span>
-                <span className="vv">86</span>
+
+            <div className="rounded-xl border border-border bg-background p-4">
+              <div className="mb-2 text-sm font-medium text-muted-foreground">Total Intelligence Assets</div>
+              <div className="flex items-end justify-between mt-2">
+                <div className="text-2xl font-bold text-foreground">{velocityMetrics.totalOrdersProcessed}</div>
+                <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">Verified Logs</Badge>
               </div>
             </div>
           </div>
-          <div className="report-chart-container-elite">
-            <ResponsiveContainer width="100%" height={400}>
+
+          {velocityMetrics.bottlenecks.length > 0 && (
+            <div className="space-y-3">
+              {velocityMetrics.bottlenecks.map((bottleneck, idx) => (
+                <div key={idx} className="flex items-start gap-3 rounded-lg border border-orange-200 bg-orange-50 p-4 text-orange-800">
+                  <AlertCircle size={20} className="mt-0.5 shrink-0" />
+                  <div>
+                    <h4 className="font-semibold">Bottleneck Detected: {bottleneck.stage}</h4>
+                    <p className="text-sm opacity-90">{bottleneck.message}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <motion.div className="rounded-2xl border border-border bg-card p-5 shadow-sm lg:col-span-2 animate-slide-up" variants={itemVariants}>
+          <div className="mb-6 flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <TrendingUp size={16} />
+              </div>
+              <div>
+                <h3 className="font-display text-lg font-bold">Growth Trajectory</h3>
+                <p className="text-xs text-muted-foreground">Order volume trend analysis</p>
+              </div>
+            </div>
+            <div className="flex gap-4 text-right text-sm">
+              <div>
+                <p className="text-muted-foreground">Peak Vol</p>
+                <p className="font-bold text-foreground">142</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Avg Vol</p>
+                <p className="font-bold text-foreground">86</p>
+              </div>
+            </div>
+          </div>
+          <div className="h-[400px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trendData} margin={{ top: 20, right: 30, left: -20, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="colorOrdersElite" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.15}/>
-                    <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.01}/>
+                  <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0d9488" stopOpacity={0.15}/>
+                    <stop offset="95%" stopColor="#0d9488" stopOpacity={0.01}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(124, 77, 255, 0.05)" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fill: 'var(--text-tertiary)', fontSize: 11, fontWeight: 500}} 
-                  dy={15} 
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fill: 'var(--text-tertiary)', fontSize: 11, fontWeight: 500}} 
-                />
-                <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--accent)', strokeWidth: 1, strokeDasharray: '4 4' }} />
-                <Area 
-                  type="monotone" 
-                  dataKey="orders" 
-                  stroke="var(--accent)" 
-                  strokeWidth={4} 
-                  fillOpacity={1} 
-                  fill="url(#colorOrdersElite)" 
-                  activeDot={{ r: 6, strokeWidth: 0, fill: 'var(--accent)' }} 
-                  animationDuration={1500}
-                />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--text-muted-foreground)', fontSize: 11, fontWeight: 500}} dy={15} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: 'var(--text-muted-foreground)', fontSize: 11, fontWeight: 500}} />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#0d9488', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                <Area type="monotone" dataKey="orders" stroke="#0d9488" strokeWidth={4} fillOpacity={1} fill="url(#colorOrders)" activeDot={{ r: 6, strokeWidth: 0, fill: '#0d9488' }} animationDuration={1500} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </motion.div>
 
-        <div className="reports-secondary-grid-elite">
-          <motion.div className="secondary-chart-card glass" variants={itemVariants}>
-            <div className="card-header-elite">
-              <PieChartIcon className="chart-icon icon-indigo" size={18} />
-              <h3>Source Acquisition</h3>
+        <div className="flex flex-col gap-6">
+          <motion.div className="rounded-2xl border border-border bg-card p-5 shadow-sm animate-slide-up" variants={itemVariants}>
+            <div className="mb-4 flex items-center gap-2">
+              <PieChartIcon className="text-indigo-500" size={18} />
+              <h3 className="font-semibold">Source Acquisition</h3>
             </div>
-            <div className="report-chart-container centered">
-              <ResponsiveContainer width="100%" height={220}>
+            <div className="h-[220px]">
+              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie
-                    data={sourceData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={65}
-                    outerRadius={85}
-                    paddingAngle={8}
-                    dataKey="value"
-                  >
+                  <Pie data={sourceData} cx="50%" cy="50%" innerRadius={65} outerRadius={85} paddingAngle={8} dataKey="value">
                     {sourceData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
                     ))}
@@ -871,51 +813,31 @@ export const ReportsPanel = () => {
                   <Tooltip content={<CustomTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="pie-legend-elite">
-                {sourceData.map(item => (
-                  <div key={item.name} className="legend-item-elite">
-                    <span className="dot" style={{backgroundColor: item.color}}></span>
-                    <span className="name">{item.name}</span>
-                    <span className="value">{item.value}</span>
-                  </div>
-                ))}
-              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap justify-center gap-4 text-xs">
+              {sourceData.map(item => (
+                <div key={item.name} className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full" style={{backgroundColor: item.color}} />
+                  <span className="text-muted-foreground">{item.name}</span>
+                  <span className="font-semibold text-foreground">{item.value}</span>
+                </div>
+              ))}
             </div>
           </motion.div>
 
-          <motion.div className="secondary-chart-card glass" variants={itemVariants}>
-            <div className="card-header-elite">
-              <Activity className="chart-icon icon-teal" size={18} />
-              <h3>Confirmation Logic</h3>
+          <motion.div className="rounded-2xl border border-border bg-card p-5 shadow-sm animate-slide-up" variants={itemVariants}>
+            <div className="mb-4 flex items-center gap-2">
+              <Activity className="text-teal-500" size={18} />
+              <h3 className="font-semibold">Confirmation Logic</h3>
             </div>
-            <div className="report-chart-container">
-              <ResponsiveContainer width="100%" height={220}>
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={confirmationData} margin={{top: 10, right: 10, left: -25, bottom: 0}}>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--text-tertiary)', fontSize: 10}} dy={10} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--text-muted-foreground)', fontSize: 10}} dy={10} />
                   <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(255,255,255,0.05)'}} />
                   <Bar dataKey="rate" radius={[4, 4, 0, 0]} barSize={24}>
                     {confirmationData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.rate > 85 ? 'var(--color-success)' : 'var(--text-tertiary)'} fillOpacity={0.6} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
-
-          <motion.div className="secondary-chart-card glass" variants={itemVariants}>
-            <div className="card-header-elite">
-              <Truck className="chart-icon icon-purple" size={18} />
-              <h3>Logistics Success</h3>
-            </div>
-            <div className="report-chart-container">
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={logisticsData} margin={{top: 10, right: 10, left: -25, bottom: 0}}>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--text-tertiary)', fontSize: 10}} dy={10} />
-                  <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(255,255,255,0.05)'}} />
-                  <Bar dataKey="rate" radius={[4, 4, 0, 0]} barSize={24}>
-                    {logisticsData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.rate > 90 ? 'var(--accent)' : 'var(--color-primary-soft)'} fillOpacity={0.6} />
+                      <Cell key={`cell-${index}`} fill={entry.rate > 85 ? '#10b981' : 'var(--text-muted-foreground)'} fillOpacity={0.6} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -925,184 +847,145 @@ export const ReportsPanel = () => {
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════════════
-          PRODUCT-WISE CONVERSION FUNNEL & CHANNEL ATTRIBUTION
-      ══════════════════════════════════════════════════ */}
-      <motion.div className="ads-analytics-section" variants={itemVariants} style={{ marginBottom: '24px' }}>
-        <div className="section-header-elite">
-          <div className="heartbeat-pulse" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>
-            <TrendingUp size={14} fill="currentColor" />
+      <motion.div className="rounded-2xl border border-border bg-card p-5 shadow-sm animate-slide-up" variants={itemVariants}>
+        <div className="mb-6 flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <TrendingUp size={16} />
           </div>
-          <h3>Product-wise Conversion Funnel</h3>
-          <span className="ads-section-badge" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>
-            Attribution Analytics
-          </span>
+          <h3 className="font-display text-lg font-bold">Product-wise Conversion Funnel</h3>
+          <Badge variant="secondary" className="ml-2 bg-primary/10 text-primary hover:bg-primary/20">Attribution Analytics</Badge>
         </div>
 
-        <div className="ads-kpi-strip" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: '20px' }}>
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {productFunnelData.map(p => (
-            <div key={p.name} className="ads-kpi-card" style={{ borderLeft: '3px solid var(--accent)' }}>
-              <span className="ads-kpi-label">{p.name} Total Orders</span>
-              <span className="ads-kpi-value">{p.total}</span>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '6px', color: 'var(--text-secondary)' }}>
-                <span>Confirmed: <strong>{p.confirmed}</strong></span>
-                <span>Conv. Rate: <strong style={{ color: 'var(--color-success)' }}>{p['Confirmation Rate']}%</strong></span>
+            <div key={p.name} className="rounded-xl border border-border bg-background p-4 border-l-4 border-l-primary shadow-sm">
+              <p className="text-sm font-medium text-muted-foreground">{p.name} Total Orders</p>
+              <p className="text-2xl font-bold text-foreground mt-1">{p.total}</p>
+              <div className="mt-2 flex justify-between text-xs text-muted-foreground font-medium">
+                <span>Confirmed: <strong className="text-foreground">{p.confirmed}</strong></span>
+                <span>Conv. Rate: <strong className="text-emerald-600">{p['Confirmation Rate']}%</strong></span>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="ads-chart-container" style={{ padding: '20px' }}>
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="h-[300px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={productFunnelData} margin={{ top: 10, right: 20, left: -10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(13, 148, 136,0.06)" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} unit="%" />
-              <Tooltip
-                content={({ active, payload, label }) => {
-                  if (!active || !payload?.length) return null;
-                  return (
-                    <div className="ads-custom-tooltip" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', padding: '10px', borderRadius: '8px' }}>
-                      <p className="ads-tt-date" style={{ fontWeight: 'bold', marginBottom: '6px' }}>{label}</p>
-                      {payload.map((p, i) => (
-                        <div key={i} className="ads-tt-row" style={{ display: 'flex', justifyContent: 'space-between', gap: '20px', fontSize: '12px', margin: '4px 0' }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span className="ads-tt-dot" style={{ background: p.fill, width: '8px', height: '8px', borderRadius: '50%', display: 'inline-block' }} />
-                            {p.name}:
-                          </span>
-                          <strong>{p.value}%</strong>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                }}
-              />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted-foreground)', fontSize: 11 }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted-foreground)', fontSize: 11 }} unit="%" />
+              <Tooltip content={<CustomTooltip />} />
               <Bar dataKey="Confirmation Rate" name="Overall Confirmation Rate" fill="#0d9488" radius={[6, 6, 0, 0]} barSize={26} />
               <Bar dataKey="Facebook Conf. Rate" name="Facebook Confirmation Rate" fill="#1877f2" radius={[6, 6, 0, 0]} barSize={26} />
               <Bar dataKey="TikTok Conf. Rate" name="TikTok Confirmation Rate" fill="#000000" radius={[6, 6, 0, 0]} barSize={26} />
             </BarChart>
           </ResponsiveContainer>
-          <div className="ads-chart-legend" style={{ marginTop: '16px', display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
-            <span><i style={{ background: '#0d9488', width: '12px', height: '12px', display: 'inline-block', marginRight: '6px', borderRadius: '2px' }} />Overall Conf. Rate</span>
-            <span><i style={{ background: '#1877f2', width: '12px', height: '12px', display: 'inline-block', marginRight: '6px', borderRadius: '2px' }} />Facebook Conf. Rate</span>
-            <span><i style={{ background: '#000000', width: '12px', height: '12px', display: 'inline-block', marginRight: '6px', borderRadius: '2px' }} />TikTok Conf. Rate</span>
-          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap justify-center gap-6 text-sm font-medium">
+          <span className="flex items-center gap-2"><div className="h-3 w-3 rounded-sm bg-[#0d9488]" />Overall Conf. Rate</span>
+          <span className="flex items-center gap-2"><div className="h-3 w-3 rounded-sm bg-[#1877f2]" />Facebook Conf. Rate</span>
+          <span className="flex items-center gap-2"><div className="h-3 w-3 rounded-sm bg-[#000000]" />TikTok Conf. Rate</span>
         </div>
       </motion.div>
 
-      {/* ══════════════════════════════════════════════════
-          DAILY ADS COST INTELLIGENCE — day-wise BDT analytics
-      ══════════════════════════════════════════════════ */}
-      <motion.div className="ads-analytics-section" variants={itemVariants}>
-        <div className="section-header-elite">
-          <div className="heartbeat-pulse ads-pulse">
-            <Megaphone size={14} fill="currentColor" />
+      <motion.div className="rounded-2xl border border-border bg-card p-5 shadow-sm animate-slide-up" variants={itemVariants}>
+        <div className="mb-6 flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Megaphone size={16} />
           </div>
-          <h3>Daily Ads Cost Intelligence</h3>
-          <span className="ads-section-badge">BDT Breakdown</span>
+          <h3 className="font-display text-lg font-bold">Daily Ads Cost Intelligence</h3>
+          <Badge variant="secondary" className="ml-2">BDT Breakdown</Badge>
         </div>
 
         {adsLoading ? (
-          <div className="ads-loading-state">
-            <div className="ads-loader-spin" />
-            <span>Fetching marketing data...</span>
+          <div className="flex h-40 flex-col items-center justify-center text-muted-foreground">
+            <Loader2 className="mb-2 h-8 w-8 animate-spin" />
+            <p>Fetching marketing data...</p>
           </div>
         ) : adsData.length === 0 ? (
-          <div className="ads-empty-state">
-            <Megaphone size={28} />
-            <p>No submitted ads reports found for the selected date range.</p>
-            <span>Go to Marketing → Submit a daily report to see data here.</span>
+          <div className="flex h-40 flex-col items-center justify-center text-muted-foreground text-center">
+            <Megaphone className="mb-2 h-10 w-10 opacity-50" />
+            <p className="font-medium text-foreground">No submitted ads reports found.</p>
+            <p className="text-sm">Go to Marketing → Submit a daily report to see data here.</p>
           </div>
         ) : (
           <>
-            {/* Summary KPI strip */}
-            <div className="ads-kpi-strip">
-              <div className="ads-kpi-card">
-                <span className="ads-kpi-label">Total Ads Cost (BDT)</span>
-                <span className="ads-kpi-value">৳{adsData.reduce((s, d) => s + d.spend, 0).toLocaleString()}</span>
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-6">
+              <div className="rounded-xl border border-border bg-background p-4 shadow-sm">
+                <p className="text-xs font-medium text-muted-foreground">Total Ads Cost</p>
+                <p className="text-xl font-bold text-foreground mt-1">৳{adsData.reduce((s, d) => s + d.spend, 0).toLocaleString()}</p>
               </div>
-              <div className="ads-kpi-card">
-                <span className="ads-kpi-label">Total Order Value (BDT)</span>
-                <span className="ads-kpi-value positive">৳{adsData.reduce((s, d) => s + d.order_value, 0).toLocaleString()}</span>
+              <div className="rounded-xl border border-border bg-background p-4 shadow-sm">
+                <p className="text-xs font-medium text-muted-foreground">Total Order Value</p>
+                <p className="text-xl font-bold text-emerald-600 mt-1">৳{adsData.reduce((s, d) => s + d.order_value, 0).toLocaleString()}</p>
               </div>
-              <div className="ads-kpi-card">
-                <span className="ads-kpi-label">Avg. Daily Spend</span>
-                <span className="ads-kpi-value">৳{Math.round(adsData.reduce((s, d) => s + d.spend, 0) / adsData.length).toLocaleString()}</span>
+              <div className="rounded-xl border border-border bg-background p-4 shadow-sm">
+                <p className="text-xs font-medium text-muted-foreground">Avg. Daily Spend</p>
+                <p className="text-xl font-bold text-foreground mt-1">৳{Math.round(adsData.reduce((s, d) => s + d.spend, 0) / adsData.length).toLocaleString()}</p>
               </div>
-              <div className="ads-kpi-card">
-                <span className="ads-kpi-label">Avg. ROAS</span>
-                <span className="ads-kpi-value accent">
-                  {(adsData.reduce((s, d) => s + d.roas, 0) / adsData.length).toFixed(2)}x
-                </span>
+              <div className="rounded-xl border border-border bg-background p-4 shadow-sm">
+                <p className="text-xs font-medium text-muted-foreground">Avg. ROAS</p>
+                <p className="text-xl font-bold text-primary mt-1">{(adsData.reduce((s, d) => s + d.roas, 0) / adsData.length).toFixed(2)}x</p>
               </div>
             </div>
 
-            {/* Day-wise Bar Chart */}
-            <div className="ads-chart-container">
-              <ResponsiveContainer width="100%" height={280}>
+            <div className="h-[280px] w-full mb-6">
+              <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={adsData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(13, 148, 136,0.06)" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} tickFormatter={v => `৳${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
-                  <Tooltip
-                    content={({ active, payload, label }) => {
-                      if (!active || !payload?.length) return null;
-                      return (
-                        <div className="ads-custom-tooltip">
-                          <p className="ads-tt-date">{label}</p>
-                          {payload.map((p, i) => (
-                            <div key={i} className="ads-tt-row">
-                              <span className="ads-tt-dot" style={{ background: p.fill }} />
-                              <span>{p.name}:</span>
-                              <strong>৳{Number(p.value).toLocaleString()}</strong>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    }}
-                  />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted-foreground)', fontSize: 11 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted-foreground)', fontSize: 11 }} tickFormatter={v => `৳${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                  <Tooltip content={<CustomTooltip />} />
                   <Bar dataKey="spend" name="Ads Cost" fill="#0d9488" fillOpacity={0.85} radius={[6, 6, 0, 0]} barSize={22} />
                   <Bar dataKey="order_value" name="Order Value" fill="#10b981" fillOpacity={0.75} radius={[6, 6, 0, 0]} barSize={22} />
                 </BarChart>
               </ResponsiveContainer>
-              <div className="ads-chart-legend">
-                <span><i style={{ background: '#0d9488' }} />Ads Cost (৳)</span>
-                <span><i style={{ background: '#10b981' }} />Order Value (৳)</span>
+              <div className="mt-4 flex justify-center gap-6 text-sm font-medium">
+                <span className="flex items-center gap-2"><div className="h-3 w-3 rounded-sm bg-[#0d9488]" />Ads Cost (৳)</span>
+                <span className="flex items-center gap-2"><div className="h-3 w-3 rounded-sm bg-[#10b981]" />Order Value (৳)</span>
               </div>
             </div>
 
-            {/* Day-wise detailed table */}
-            <div className="ads-day-table">
-              <div className="ads-day-table-head">
-                <span>Date</span>
-                <span>Qty</span>
-                <span>Ads Cost (৳)</span>
-                <span>Per Purchase Av.</span>
-                <span>Order Value (৳)</span>
-                <span>Orders</span>
-                <span>ROAS</span>
-              </div>
-              {adsData.map((row) => (
-                <div key={row.date} className={`ads-day-row ${row.roas >= 2 ? 'good-roas' : row.roas > 0 && row.roas < 1 ? 'poor-roas' : ''}`}>
-                  <span className="ads-day-date">{row.name}</span>
-                  <span>{row.qty || '—'}</span>
-                  <span className="ads-spend-val">৳{row.spend.toLocaleString()}</span>
-                  <span>{row.qty > 0 ? `৳${Math.round(row.spend / row.qty).toLocaleString()}` : '—'}</span>
-                  <span className="ads-orderval-val">৳{row.order_value.toLocaleString()}</span>
-                  <span>{row.orders}</span>
-                  <span className={`ads-roas-badge ${row.roas >= 2 ? 'roas-good' : row.roas > 0 ? 'roas-ok' : 'roas-none'}`}>
-                    {row.roas > 0 ? `${row.roas}x` : '—'}
-                  </span>
-                </div>
-              ))}
+            <div className="overflow-x-auto rounded-xl border border-border">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-secondary/50 text-muted-foreground border-b border-border">
+                  <tr>
+                    <th className="p-3 font-medium">Date</th>
+                    <th className="p-3 font-medium">Qty</th>
+                    <th className="p-3 font-medium">Ads Cost (৳)</th>
+                    <th className="p-3 font-medium">Per Purchase Av.</th>
+                    <th className="p-3 font-medium text-emerald-600">Order Value (৳)</th>
+                    <th className="p-3 font-medium">Orders</th>
+                    <th className="p-3 font-medium">ROAS</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {adsData.map((row) => (
+                    <tr key={row.date} className={cn("hover:bg-secondary/20", row.roas >= 2 ? "bg-emerald-500/5" : "")}>
+                      <td className="p-3 font-medium text-foreground">{row.name}</td>
+                      <td className="p-3">{row.qty || '—'}</td>
+                      <td className="p-3 font-medium text-rose-600">৳{row.spend.toLocaleString()}</td>
+                      <td className="p-3">{row.qty > 0 ? `৳${Math.round(row.spend / row.qty).toLocaleString()}` : '—'}</td>
+                      <td className="p-3 font-medium text-emerald-600">৳{row.order_value.toLocaleString()}</td>
+                      <td className="p-3 font-medium">{row.orders}</td>
+                      <td className="p-3">
+                        <Badge variant="outline" className={
+                          row.roas >= 2 ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 
+                          row.roas > 0 ? 'border-amber-200 bg-amber-50 text-amber-700' : 
+                          'border-border text-muted-foreground'
+                        }>
+                          {row.roas > 0 ? `${row.roas}x` : '—'}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </>
         )}
       </motion.div>
-
-      {/* ══════════════════════════════════════════════════
-          USER PERFORMANCE ANALYTICS — per-agent tracking
-      ══════════════════════════════════════════════════ */}
 
     </motion.div>
   );

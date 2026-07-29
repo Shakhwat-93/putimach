@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import './BackupPanel.css';
 import {
   DatabaseBackup, Download, RefreshCw, CheckCircle2,
   XCircle, Clock, CloudUpload, Settings2, History,
@@ -7,7 +8,11 @@ import {
 } from 'lucide-react';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import './BackupPanel.css';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { Input } from '../components/ui/input';
+import { cn } from '../lib/utils';
 
 // ── Google Drive OAuth helper ───────────────────────────────
 // Uses Google Identity Services (browser popup — no redirect, no page reload)
@@ -59,23 +64,31 @@ const countdownTo = (iso) => {
 };
 
 const StatusBadge = ({ status }) => {
-  const icons = {
-    completed: <CheckCircle2 size={12} />,
-    running:   <Loader2 size={12} className="spin" />,
-    failed:    <XCircle size={12} />,
-    pending:   <Clock size={12} />,
-  };
+  const isCompleted = status === 'completed';
+  const isRunning = status === 'running';
+  const isFailed = status === 'failed';
+  const isPending = status === 'pending';
+
   return (
-    <span className={`backup-status-badge ${status}`}>
-      {icons[status] || null}
+    <Badge 
+      variant={
+        isCompleted ? 'success' : 
+        isFailed ? 'destructive' : 
+        (isPending || isRunning) ? 'warning' : 'outline'
+      }
+      className="flex w-fit items-center gap-1.5"
+    >
+      {isCompleted && <CheckCircle2 size={12} />}
+      {isRunning && <Loader2 size={12} className="animate-spin" />}
+      {isFailed && <XCircle size={12} />}
+      {isPending && <Clock size={12} />}
       {status}
-    </span>
+    </Badge>
   );
 };
 
 const ITEMS_PER_PAGE = 8;
 
-// ════════════════════════════════════════════════════════════
 export const BackupPanel = () => {
   const { profile, userRoles } = useAuth();
   const isAdmin = userRoles?.includes('Admin');
@@ -109,7 +122,6 @@ export const BackupPanel = () => {
   const [savingSettings, setSavingSettings] = useState(false);
   const [countdown, setCountdown]       = useState(null);
 
-  // Holds the last backup JSON blob for Drive upload
   const lastBackupDataRef = useRef(null);
 
   // ── Load Settings ─────────────────────────────────────
@@ -164,7 +176,7 @@ export const BackupPanel = () => {
     setLastResult(null);
     lastBackupDataRef.current = null;
 
-    // Simulate granular progress (Edge Function runs server-side so we animate)
+    // Simulate granular progress
     const steps = [
       { pct: 10, msg: 'Connecting to database...' },
       { pct: 25, msg: 'Exporting orders & activity logs...' },
@@ -184,7 +196,6 @@ export const BackupPanel = () => {
     }, 1200);
 
     try {
-      // Create pending log entry
       let logId = null;
       try {
         const log = await api.createBackupLog({
@@ -195,7 +206,6 @@ export const BackupPanel = () => {
         logId = log?.id;
       } catch { /* non-fatal */ }
 
-      // Call Edge Function
       const result = await api.triggerBackup({
         type: 'manual',
         logId,
@@ -209,17 +219,14 @@ export const BackupPanel = () => {
       setLastResult(result);
       lastBackupDataRef.current = result.backupData || null;
 
-      // Refresh data
       await loadSettings();
       await loadLogs(1);
       setLogsPage(1);
 
-      // Auto-download
       if (result.backupData) {
         triggerDownload(result.backupData, result.fileName);
       }
 
-      // If Drive is connected, auto-upload
       if (driveToken && result.backupData) {
         await uploadToDrive(result.backupData, result.fileName);
       }
@@ -267,7 +274,6 @@ export const BackupPanel = () => {
     }
     try {
       await loadGoogleScript();
-      // Save client ID to settings
       if (clientId.trim()) {
         await api.updateBackupSettings({ google_drive_client_id: clientId.trim() });
       }
@@ -280,7 +286,6 @@ export const BackupPanel = () => {
             return;
           }
           setDriveToken(response.access_token);
-          // Get the user's email from the token info
           try {
             const r = await fetch(
               `https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${response.access_token}`
@@ -316,7 +321,7 @@ export const BackupPanel = () => {
       const jsonBlob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const metadata = {
         name: fileName || `orderflow_backup_${Date.now()}.json`,
-        parents: ['root'], // Upload to root Drive folder
+        parents: ['root'], 
         description: `OrderFlow automated backup — ${new Date().toLocaleString()}`,
       };
       const form = new FormData();
@@ -334,7 +339,6 @@ export const BackupPanel = () => {
       if (!response.ok) throw new Error(`Drive upload failed: ${response.status}`);
       const driveFile = await response.json();
 
-      // Update the most recent log entry with Drive link
       const { data: recentLogs } = await api.getBackupLogs(1, 1);
       if (recentLogs[0]?.id) {
         await api.updateBackupLog(recentLogs[0].id, {
@@ -372,367 +376,385 @@ export const BackupPanel = () => {
 
   const totalPages = Math.ceil(logsCount / ITEMS_PER_PAGE);
 
-  // ── Render ─────────────────────────────────────────────
   return (
-    <div className="backup-panel">
-
+    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      
       {/* Header */}
-      <div className="backup-header">
-        <div className="backup-header-text">
-          <h1>
-            <span className="backup-title-icon"><DatabaseBackup size={18} /></span>
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold font-display text-foreground flex items-center gap-2">
+            <DatabaseBackup className="text-primary" size={28} />
             Backup System
           </h1>
-          <p>Enterprise data protection — all backups are read-only and isolated from live orders.</p>
+          <p className="text-muted-foreground mt-1">
+            Enterprise data protection — all backups are read-only and isolated from live orders.
+          </p>
         </div>
-        <button
-          id="backup-now-btn"
-          className={`backup-now-btn ${isRunning ? 'running' : ''}`}
+        <Button
           onClick={handleBackupNow}
           disabled={isRunning || !isAdmin}
+          className="bg-primary text-primary-foreground rounded-full px-6 py-2.5 shadow-md shadow-primary/20"
         >
-          {isRunning
-            ? <><Loader2 size={16} className="spin" /> Backing Up...</>
-            : <><Play size={16} /> Backup Now</>
-          }
-        </button>
+          {isRunning ? (
+            <><Loader2 size={16} className="animate-spin mr-2" /> Backing Up...</>
+          ) : (
+            <><Play size={16} className="mr-2" /> Backup Now</>
+          )}
+        </Button>
       </div>
 
       {/* Success Banner */}
       {lastResult && !isRunning && (
-        <div className="backup-success-banner">
-          <CheckCircle2 size={20} />
-          <div className="backup-success-banner-text">
-            <strong>Backup Complete!</strong> &nbsp;
-            {lastResult.totalRecords?.toLocaleString()} records across {lastResult.successfulTables} tables —&nbsp;
-            {formatBytes(lastResult.fileSizeBytes)} &nbsp;·&nbsp;
-            {lastResult.durationMs}ms
-            {driveToken && driveUploading && ' · Uploading to Drive...'}
-            {driveToken && !driveUploading && ' · Saved to Google Drive ✓'}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800 animate-slide-up">
+          <div className="flex items-center gap-3 text-emerald-800 dark:text-emerald-300 text-sm">
+            <CheckCircle2 size={20} className="shrink-0" />
+            <div>
+              <strong className="font-semibold">Backup Complete!</strong>{' '}
+              {lastResult.totalRecords?.toLocaleString()} records across {lastResult.successfulTables} tables —{' '}
+              {formatBytes(lastResult.fileSizeBytes)} · {lastResult.durationMs}ms
+              {driveToken && driveUploading && ' · Uploading to Drive...'}
+              {driveToken && !driveUploading && ' · Saved to Google Drive ✓'}
+            </div>
           </div>
           {lastResult.backupData && (
-            <button
-              className="backup-action-btn download"
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0 border-emerald-200 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-900"
               onClick={() => triggerDownload(lastResult.backupData, lastResult.fileName)}
             >
-              <Download size={13} /> Download
-            </button>
+              <Download size={14} className="mr-2" /> Download JSON
+            </Button>
           )}
         </div>
       )}
 
       {/* Error Banner */}
       {backupError && (
-        <div className="backup-error-banner">
-          <AlertCircle size={18} />
-          {backupError}
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 dark:bg-rose-950/30 dark:border-rose-800 dark:text-rose-300 text-sm animate-slide-up">
+          <AlertCircle size={20} className="shrink-0" />
+          <span>{backupError}</span>
         </div>
       )}
 
       {/* Progress Bar */}
       {isRunning && (
-        <div className="backup-progress-wrap">
-          <div className="backup-progress-header">
-            <span className="backup-progress-label">
-              <Loader2 size={14} className="spin" /> Running backup...
-            </span>
-            <span className="backup-progress-pct">{progress}%</span>
-          </div>
-          <div className="backup-progress-bar-track">
-            <div className="backup-progress-bar-fill" style={{ width: `${progress}%` }} />
-          </div>
-          <div className="backup-progress-msg">{progressMsg}</div>
-        </div>
+        <Card className="animate-slide-up border-primary/20 bg-primary/5">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-center mb-2 text-sm font-medium">
+              <span className="flex items-center gap-2 text-primary">
+                <Loader2 size={16} className="animate-spin" /> Running backup...
+              </span>
+              <span className="text-primary">{progress}%</span>
+            </div>
+            <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary transition-all duration-500 ease-out rounded-full" 
+                style={{ width: `${progress}%` }} 
+              />
+            </div>
+            <div className="mt-2 text-xs text-muted-foreground">{progressMsg}</div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Stats Row */}
-      <div className="backup-stats-grid">
-        <div className="backup-stat-card">
-          <div className="backup-stat-icon purple"><Clock size={20} /></div>
-          <div className="backup-stat-content">
-            <div className="backup-stat-label">Last Backup</div>
-            <div className="backup-stat-value">
-              {settingsLoading ? '...' : timeAgo(settings?.last_backup_at)}
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="animate-slide-up [animation-delay:50ms]">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+              <Clock size={24} />
             </div>
-            <div className="backup-stat-sub">
-              {settings?.last_backup_status === 'completed' ? '✓ Successful' : settings?.last_backup_status || 'Never'}
+            <div>
+              <div className="text-sm text-muted-foreground font-medium">Last Backup</div>
+              <div className="text-xl font-bold text-foreground">
+                {settingsLoading ? '...' : timeAgo(settings?.last_backup_at)}
+              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                {settings?.last_backup_status === 'completed' ? '✓ Successful' : settings?.last_backup_status || 'Never'}
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="backup-stat-card">
-          <div className="backup-stat-icon green"><History size={20} /></div>
-          <div className="backup-stat-content">
-            <div className="backup-stat-label">Total Backups</div>
-            <div className="backup-stat-value">{logsCount.toLocaleString()}</div>
-            <div className="backup-stat-sub">stored in history</div>
-          </div>
-        </div>
+        <Card className="animate-slide-up [animation-delay:100ms]">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+              <History size={24} />
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground font-medium">Total Backups</div>
+              <div className="text-xl font-bold text-foreground">{logsCount.toLocaleString()}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">stored in history</div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="backup-stat-card">
-          <div className="backup-stat-icon blue"><HardDrive size={20} /></div>
-          <div className="backup-stat-content">
-            <div className="backup-stat-label">Last Size</div>
-            <div className="backup-stat-value">
-              {formatBytes(settings?.last_backup_size_bytes || 0)}
+        <Card className="animate-slide-up [animation-delay:150ms]">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+              <HardDrive size={24} />
             </div>
-            <div className="backup-stat-sub">compressed JSON</div>
-          </div>
-        </div>
+            <div>
+              <div className="text-sm text-muted-foreground font-medium">Last Size</div>
+              <div className="text-xl font-bold text-foreground">
+                {formatBytes(settings?.last_backup_size_bytes || 0)}
+              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">compressed JSON</div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="backup-stat-card">
-          <div className="backup-stat-icon orange"><Zap size={20} /></div>
-          <div className="backup-stat-content">
-            <div className="backup-stat-label">Auto Backup</div>
-            <div className="backup-stat-value">
-              {settings?.auto_backup_enabled ? 'ON' : 'OFF'}
+        <Card className="animate-slide-up [animation-delay:200ms]">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+              <Zap size={24} />
             </div>
-            <div className="backup-stat-sub">
-              {settings?.auto_backup_enabled
-                ? `Every ${settings.backup_interval_hours}h · ${countdown || '—'}`
-                : 'Manual only'}
+            <div>
+              <div className="text-sm text-muted-foreground font-medium">Auto Backup</div>
+              <div className="text-xl font-bold text-foreground">
+                {settings?.auto_backup_enabled ? 'ON' : 'OFF'}
+              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                {settings?.auto_backup_enabled
+                  ? `Every ${settings.backup_interval_hours}h · ${countdown || '—'}`
+                  : 'Manual only'}
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Two-column: Google Drive + Auto Backup Settings */}
-      <div className="backup-grid-2col">
-
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Google Drive */}
-        <div className="backup-section-card">
-          <div className="backup-section-title">
-            <CloudUpload size={16} /> Google Drive
-          </div>
-          <div className="drive-connect-area">
+        <Card className="animate-slide-up">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <CloudUpload size={20} className="text-primary" /> Google Drive
+            </CardTitle>
+            <CardDescription>Automatically upload backups to your Google Drive</CardDescription>
+          </CardHeader>
+          <CardContent>
             {driveToken ? (
-              <>
-                <div className="drive-connected-badge">
-                  <div className="drive-connected-dot" />
-                  <div className="drive-connected-info">
-                    <div className="drive-connected-label">Connected</div>
-                    <div className="drive-connected-account">{driveEmail || 'Google Drive'}</div>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-secondary/50 rounded-xl border border-border">
+                <div className="flex items-center gap-3">
+                  <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <div>
+                    <div className="text-sm font-medium text-foreground">Connected</div>
+                    <div className="text-xs text-muted-foreground">{driveEmail || 'Google Drive Account'}</div>
                   </div>
-                  {driveUploading && <Loader2 size={14} className="spin" style={{ color: '#0ea5e9' }} />}
+                  {driveUploading && <Loader2 size={16} className="animate-spin text-primary ml-2" />}
                 </div>
-                <button className="drive-btn disconnect" onClick={handleDisconnectDrive}>
-                  Disconnect Drive
-                </button>
-              </>
+                <Button variant="outline" size="sm" onClick={handleDisconnectDrive}>
+                  Disconnect
+                </Button>
+              </div>
             ) : (
-              <>
-                <input
-                  className="drive-client-id-input"
+              <div className="space-y-4">
+                <Input
                   type="text"
                   placeholder="Paste your Google OAuth Client ID..."
                   value={clientId}
                   onChange={(e) => setClientId(e.target.value)}
+                  className="w-full"
                 />
-                <div className="drive-help-text">
-                  Get a Client ID from&nbsp;
-                  <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">
+                <p className="text-xs text-muted-foreground">
+                  Get a Client ID from{' '}
+                  <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                     Google Cloud Console
                   </a>
-                  &nbsp;→ Enable Drive API → OAuth 2.0 Credentials.
-                </div>
-                <button className="drive-btn connect" onClick={handleConnectDrive}>
-                  <CloudUpload size={15} /> Connect Google Drive
-                </button>
-              </>
+                  {' '}→ Enable Drive API → OAuth 2.0 Credentials.
+                </p>
+                <Button onClick={handleConnectDrive} className="w-full sm:w-auto">
+                  <CloudUpload size={16} className="mr-2" /> Connect Drive
+                </Button>
+              </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Auto Backup Settings */}
-        <div className="backup-section-card">
-          <div className="backup-section-title">
-            <Settings2 size={16} /> Auto Backup
-          </div>
-
-          <div className="auto-backup-toggle-row">
-            <div>
-              <div className="auto-backup-toggle-label">Enable auto backup</div>
-              <div className="auto-backup-toggle-sub">Runs silently in the background</div>
+        <Card className="animate-slide-up">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Settings2 size={20} className="text-primary" /> Auto Backup
+            </CardTitle>
+            <CardDescription>Configure automatic background backups</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium text-sm text-foreground">Enable auto backup</div>
+                <div className="text-xs text-muted-foreground">Runs silently in the background</div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer" 
+                  checked={autoEnabled}
+                  onChange={(e) => setAutoEnabled(e.target.checked)}
+                />
+                <div className="w-11 h-6 bg-secondary peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
             </div>
-            <label className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={autoEnabled}
-                onChange={(e) => setAutoEnabled(e.target.checked)}
-              />
-              <span className="toggle-slider" />
-            </label>
-          </div>
 
-          <div className="interval-select-row">
-            <label>Every</label>
-            <select
-              className="interval-select"
-              value={intervalHours}
-              onChange={(e) => setIntervalHours(Number(e.target.value))}
-              disabled={!autoEnabled}
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-foreground">Interval</label>
+              <select
+                className="bg-background border border-border text-foreground text-sm rounded-lg focus:ring-primary focus:border-primary block p-2"
+                value={intervalHours}
+                onChange={(e) => setIntervalHours(Number(e.target.value))}
+                disabled={!autoEnabled}
+              >
+                <option value={6}>Every 6 hours</option>
+                <option value={12}>Every 12 hours</option>
+                <option value={24}>Every 24 hours</option>
+                <option value={48}>Every 48 hours</option>
+                <option value={168}>Every 7 days</option>
+              </select>
+            </div>
+
+            {autoEnabled && settings?.next_backup_at && (
+              <div className="flex items-center gap-2 text-sm text-primary bg-primary/5 p-3 rounded-lg border border-primary/10">
+                <Clock size={16} />
+                Next backup <span className="font-bold">{countdown || '—'}</span>
+              </div>
+            )}
+
+            <Button
+              onClick={handleSaveSettings}
+              disabled={savingSettings}
+              className="w-full sm:w-auto"
             >
-              <option value={6}>6 hours</option>
-              <option value={12}>12 hours</option>
-              <option value={24}>24 hours</option>
-              <option value={48}>48 hours</option>
-              <option value={168}>7 days</option>
-            </select>
-          </div>
-
-          {autoEnabled && settings?.next_backup_at && (
-            <div className="next-backup-row">
-              <Clock size={14} style={{ color: '#0d9488' }} />
-              Next backup&nbsp;
-              <span className="next-backup-countdown">{countdown || '—'}</span>
-            </div>
-          )}
-
-          <button
-            className="backup-now-btn"
-            style={{ marginTop: 12, padding: '9px 18px', fontSize: '0.85rem' }}
-            onClick={handleSaveSettings}
-            disabled={savingSettings}
-          >
-            {savingSettings ? <Loader2 size={14} className="spin" /> : <Shield size={14} />}
-            {savingSettings ? 'Saving...' : 'Save Settings'}
-          </button>
-        </div>
+              {savingSettings ? <Loader2 size={16} className="animate-spin mr-2" /> : <Shield size={16} className="mr-2" />}
+              {savingSettings ? 'Saving...' : 'Save Settings'}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Backup History */}
-      <div className="backup-history-card">
-        <div className="backup-history-header">
-          <div className="backup-history-title">
-            <History size={16} /> Backup History
-            <span className="backup-history-count">{logsCount}</span>
-          </div>
-          <button
-            className="backup-action-btn download"
-            onClick={() => loadLogs(logsPage)}
-            title="Refresh"
-          >
-            <RefreshCw size={13} />
-          </button>
-        </div>
-
-        <div className="backup-table-wrap">
+      <Card className="animate-slide-up">
+        <CardHeader className="flex flex-row items-center justify-between pb-4">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <History size={20} className="text-primary" /> 
+            Backup History
+            <Badge variant="secondary" className="ml-2">{logsCount}</Badge>
+          </CardTitle>
+          <Button variant="ghost" size="icon" onClick={() => loadLogs(logsPage)} title="Refresh">
+            <RefreshCw size={16} />
+          </Button>
+        </CardHeader>
+        <CardContent>
           {logsLoading ? (
-            <div className="backup-empty-state">
-              <Loader2 size={32} className="spin" />
+            <div className="py-12 flex flex-col items-center justify-center text-muted-foreground">
+              <Loader2 size={32} className="animate-spin mb-4 text-primary" />
               <p>Loading backup history...</p>
             </div>
           ) : logs.length === 0 ? (
-            <div className="backup-empty-state">
-              <DatabaseBackup size={40} />
-              <p>No backups yet. Click <strong>Backup Now</strong> to create your first backup.</p>
+            <div className="py-12 flex flex-col items-center justify-center text-muted-foreground text-center">
+              <DatabaseBackup size={48} className="mb-4 text-secondary-foreground opacity-20" />
+              <p className="text-lg font-medium text-foreground mb-1">No backups yet</p>
+              <p className="text-sm">Click <strong>Backup Now</strong> to create your first backup.</p>
             </div>
           ) : (
-            <table className="backup-table">
-              <thead>
-                <tr>
-                  <th>Date / Time</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th>Records</th>
-                  <th>Size</th>
-                  <th>By</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map((log) => (
-                  <tr key={log.id}>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>
+            <div className="space-y-3">
+              {logs.map((log) => (
+                <div key={log.id} className="rounded-2xl border border-border bg-card p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between transition-colors hover:bg-secondary/20">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground text-sm">
                         {new Date(log.created_at).toLocaleDateString('en-BD', {
                           day: '2-digit', month: 'short', year: 'numeric'
                         })}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #64748b)' }}>
+                      </span>
+                      <span className="text-muted-foreground text-xs">
                         {new Date(log.created_at).toLocaleTimeString('en-BD', {
                           hour: '2-digit', minute: '2-digit'
                         })}
-                        &nbsp;·&nbsp;{timeAgo(log.created_at)}
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`backup-type-badge ${log.type}`}>{log.type}</span>
-                    </td>
-                    <td><StatusBadge status={log.status} /></td>
-                    <td>{log.total_records?.toLocaleString() || '—'}</td>
-                    <td>{formatBytes(log.file_size_bytes)}</td>
-                    <td style={{ fontSize: '0.8rem' }}>{log.triggered_by_user_name || '—'}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        {log.supabase_storage_path && (
-                          <button
-                            className="backup-action-btn download"
-                            onClick={() => handleDownloadFromStorage(log)}
-                            title="Download backup"
-                          >
-                            <Download size={12} /> JSON
-                          </button>
-                        )}
-                        {log.google_drive_link && (
-                          <a
-                            className="backup-action-btn drive"
-                            href={log.google_drive_link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="Open in Google Drive"
-                          >
-                            <ExternalLink size={12} /> Drive
-                          </a>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </span>
+                      <span className="text-muted-foreground text-xs bg-secondary px-2 py-0.5 rounded-full">
+                        {timeAgo(log.created_at)}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <Badge variant="outline" className="uppercase text-[10px]">{log.type}</Badge>
+                      <StatusBadge status={log.status} />
+                      <span className="flex items-center gap-1"><HardDrive size={12}/> {formatBytes(log.file_size_bytes)}</span>
+                      <span className="flex items-center gap-1"><DatabaseBackup size={12}/> {log.total_records?.toLocaleString() || '—'} records</span>
+                      <span className="flex items-center gap-1"><Shield size={12}/> By {log.triggered_by_user_name || '—'}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {log.supabase_storage_path && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-full px-4 py-2 text-xs font-bold"
+                        onClick={() => handleDownloadFromStorage(log)}
+                        title="Download backup"
+                      >
+                        <Download size={12} className="mr-1.5" /> JSON
+                      </Button>
+                    )}
+                    {log.google_drive_link && (
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="rounded-full px-4 py-2 text-xs font-bold text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/30"
+                      >
+                        <a href={log.google_drive_link} target="_blank" rel="noopener noreferrer" title="Open in Google Drive">
+                          <ExternalLink size={12} className="mr-1.5" /> Drive
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
-        </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="backup-pagination">
-            <button
-              className="backup-page-btn"
-              onClick={() => setLogsPage((p) => Math.max(1, p - 1))}
-              disabled={logsPage === 1}
-            >
-              <ChevronLeft size={14} />
-            </button>
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              const pg = logsPage <= 3 ? i + 1 : logsPage - 2 + i;
-              if (pg < 1 || pg > totalPages) return null;
-              return (
-                <button
-                  key={pg}
-                  className={`backup-page-btn ${logsPage === pg ? 'active' : ''}`}
-                  onClick={() => setLogsPage(pg)}
-                >
-                  {pg}
-                </button>
-              );
-            })}
-            <button
-              className="backup-page-btn"
-              onClick={() => setLogsPage((p) => Math.min(totalPages, p + 1))}
-              disabled={logsPage === totalPages}
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Spin animation */}
-      <style>{`
-        .spin { animation: backup-spin 1s linear infinite; }
-        @keyframes backup-spin { to { transform: rotate(360deg); } }
-      `}</style>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-1 mt-6">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-lg"
+                onClick={() => setLogsPage((p) => Math.max(1, p - 1))}
+                disabled={logsPage === 1}
+              >
+                <ChevronLeft size={14} />
+              </Button>
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pg = logsPage <= 3 ? i + 1 : logsPage - 2 + i;
+                if (pg < 1 || pg > totalPages) return null;
+                return (
+                  <Button
+                    key={pg}
+                    variant={logsPage === pg ? 'default' : 'outline'}
+                    className={`h-8 w-8 rounded-lg p-0 ${logsPage === pg ? 'bg-primary text-primary-foreground' : ''}`}
+                    onClick={() => setLogsPage(pg)}
+                  >
+                    {pg}
+                  </Button>
+                );
+              })}
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-lg"
+                onClick={() => setLogsPage((p) => Math.min(totalPages, p + 1))}
+                disabled={logsPage === totalPages}
+              >
+                <ChevronRight size={14} />
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import './Input.css';
 import { Input as ShadcnInput } from './ui/input';
 
 export const Input = forwardRef(({ 

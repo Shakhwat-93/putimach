@@ -1,8 +1,8 @@
 import React from 'react';
+import './AccessRestricted.css';
 import { ShieldAlert, UserPlus, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './Button';
-import './AccessRestricted.css';
 
 export const AccessRestricted = () => {
   const { signOut, user } = useAuth();

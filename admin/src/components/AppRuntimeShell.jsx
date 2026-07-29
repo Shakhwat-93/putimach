@@ -1,8 +1,8 @@
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import './AppRuntimeShell.css';
 import { useState } from 'react';
 import { AppLaunchScreen } from './AppLaunchScreen';
 import { useRuntime } from '../context/RuntimeContext';
-import './AppRuntimeShell.css';
 
 export const AppRuntimeShell = ({ children }) => {
   const { bootError, bridgeReady, isNativeApp: native, isOnline } = useRuntime();

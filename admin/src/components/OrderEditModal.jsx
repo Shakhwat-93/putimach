@@ -375,6 +375,7 @@ export const OrderEditModal = ({ isOpen, onClose, order = null }) => {
       onClose={onClose}
       title={isEdit ? `Edit Order` : 'Create New Order'}
       subtitle={isEdit ? `#${order?.id} · ${order?.customer_name}` : 'Fill in the customer and product details below'}
+      size="xl"
     >
       {/* Conflict Banner */}
       {otherEditors.length > 0 && (
@@ -389,6 +390,7 @@ export const OrderEditModal = ({ isOpen, onClose, order = null }) => {
         </div>
       )}
 
+      <div className="px-5 pb-5">
       <form onSubmit={handleSubmit}>
         {/* Two-Panel Layout */}
         <div className="order-modal-layout">
@@ -700,6 +702,7 @@ export const OrderEditModal = ({ isOpen, onClose, order = null }) => {
           </div>
         </div>
       </form>
+      </div>
     </Modal>
   );
 };

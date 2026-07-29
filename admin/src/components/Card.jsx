@@ -1,4 +1,5 @@
 import React from 'react';
+import './Card.css';
 import { Card as ShadcnCard } from './ui/card';
 
 export const Card = ({ children, className = '', noPadding = false, ...props }) => {

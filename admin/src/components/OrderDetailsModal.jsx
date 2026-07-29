@@ -416,6 +416,7 @@ export const OrderDetailsModal = ({ isOpen, onClose, order, onEdit }) => {
       isOpen={isOpen}
       onClose={onClose}
       title={`Order Details: #${effectiveOrder.id.replace('ORD-', '')}`}
+      size="lg"
     >
       <div className="order-details-elite">
         {/* Modern Tabs Bar */}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import './DigitalMarketerPanel.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -9,7 +10,7 @@ import {
   Clock, AlertCircle, Eye, Loader2, RefreshCw, Edit2
 } from 'lucide-react';
 import { CampaignEntryModal } from '../components/CampaignEntryModal';
-import './DigitalMarketerPanel.css';
+
 
 const PLATFORMS = ['Facebook', 'Instagram', 'Google', 'TikTok', 'YouTube', 'Twitter', 'LinkedIn', 'Other'];
 
@@ -31,22 +32,24 @@ const formatDate = (dateStr) =>
   new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
 const StatCard = ({ icon: Icon, label, value, color, sub }) => (
-  <div className="dm-stat-card">
-    <div className="dm-stat-icon" style={{ background: `${color}12`, color }}>
+  <div className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow space-y-3">
+    <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: `${color}12`, color }}>
       <Icon size={22} strokeWidth={2.5} />
     </div>
-    <div className="dm-stat-content">
-      <p className="dm-stat-label">{label}</p>
-      <h4 className="dm-stat-value">{value}</h4>
-      {sub && <p className="dm-stat-sub">{sub}</p>}
+    <div>
+      <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">{label}</p>
+      <h4 className="text-2xl font-display font-bold text-foreground mt-1">{value}</h4>
+      {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
     </div>
   </div>
 );
 
 const EmptyState = ({ message }) => (
-  <div className="dm-empty-elite">
-    <div className="dm-empty-icon"><Megaphone size={32} /></div>
-    <p>{message}</p>
+  <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-muted-foreground">
+    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-muted-foreground">
+      <Megaphone size={28} />
+    </div>
+    <p className="text-sm font-medium">{message}</p>
   </div>
 );
 
@@ -353,33 +356,37 @@ export const DigitalMarketerPanel = () => {
   };
 
   return (
-    <div className="dm-panel">
+    <div className="space-y-6 pb-8">
       {/* ── Header ── */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="dm-header-elite"
+        className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
       >
-        <div className="dm-header-left">
-          <div className="dm-header-icon-premium">
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <Megaphone size={22} strokeWidth={2.5} />
           </div>
-          <div className="dm-header-text">
-            <h1 className="dm-title-elite">Marketing Intelligence</h1>
-            <p className="dm-subtitle-elite">Operational insights, daily spend and campaign ROI</p>
+          <div>
+            <h1 className="text-3xl font-display font-bold text-foreground">Marketing <span className="text-primary">Intelligence</span></h1>
+            <p className="text-sm text-muted-foreground">Operational insights, daily spend and campaign ROI</p>
           </div>
         </div>
-        <div className="dm-header-right-elite">
-          <div className="dm-date-pill">
-            <Calendar size={14} />
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+            <Calendar size={13} />
             <span>{formatDate(todayStr)}</span>
           </div>
           <motion.div 
             initial={{ scale: 0.9 }}
             animate={{ scale: 1 }}
-            className={`dm-status-tag ${isSubmitted ? 'submitted' : 'draft'}`}
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-black uppercase ${
+              isSubmitted 
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400' 
+                : 'bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
+            }`}
           >
-            {isSubmitted ? <Check size={12} /> : <Clock size={12} />}
+            {isSubmitted ? <Check size={11} /> : <Clock size={11} />}
             {isSubmitted ? 'FINALIZED' : 'DRAFT'}
           </motion.div>
         </div>
@@ -396,7 +403,7 @@ export const DigitalMarketerPanel = () => {
         }}
         initial="hidden"
         animate="show"
-        className="dm-stats-grid-elite"
+        className="grid grid-cols-2 gap-4 lg:grid-cols-4"
       >
         <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}>
           <StatCard
@@ -436,8 +443,8 @@ export const DigitalMarketerPanel = () => {
         </motion.div>
       </motion.div>
 
-      {/* ── Elite Tabs ── */}
-      <div className="dm-tabs-container">
+      {/* ── Tabs ── */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-none pb-2">
         {[
           { key: 'daily', label: "Daily Intelligence", icon: Calendar },
           { key: 'summary', label: 'ROI Analysis', icon: BarChart2 },
@@ -445,10 +452,14 @@ export const DigitalMarketerPanel = () => {
         ].map(tab => (
           <button
             key={tab.key}
-            className={`dm-premium-tab ${activeTab === tab.key ? 'active' : ''}`}
+            className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-bold transition-all ${
+              activeTab === tab.key
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-card border-border text-muted-foreground hover:border-primary/50'
+            }`}
             onClick={() => setActiveTab(tab.key)}
           >
-            <tab.icon size={15} />
+            <tab.icon size={14} />
             {tab.label}
           </button>
         ))}

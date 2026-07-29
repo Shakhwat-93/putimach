@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import './TaskBoard.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTasks } from '../context/TaskContext';
 import { useAuth } from '../context/AuthContext';
@@ -17,7 +18,7 @@ import {
   FileText, FolderOpen, Star, AlertCircle, Award, CheckSquare, Square,
   TrendingDown, Send, X, Mail, Sparkles
 } from 'lucide-react';
-import './TaskBoard.css';
+import { cn } from '../lib/utils';
 
 // ── Priority config ──────────────────────────────────────────────────────────
 const PRIORITY_CONFIG = {
@@ -42,19 +43,19 @@ const fmtDate = (d) => {
 
 // ── Metric Card ──────────────────────────────────────────────────────────────
 const MetricCard = ({ label, value, icon: Icon, accent, trend }) => (
-  <div className="tb-metric-card">
-    <div className="tb-metric-top">
-      <div className="tb-metric-icon" style={{ background: `${accent}18`, color: accent }}>
+  <div className="rounded-2xl border border-border bg-card p-5 space-y-3 shadow-sm hover:shadow-md transition-shadow">
+    <div className="flex items-center justify-between">
+      <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: `${accent}18`, color: accent }}>
         <Icon size={18} />
       </div>
       {trend && (
-        <span className="tb-metric-trend" style={{ color: accent }}>
+        <span className="flex items-center gap-1 text-[11px] font-bold" style={{ color: accent }}>
           <ArrowUpRight size={13} /> {trend}
         </span>
       )}
     </div>
-    <div className="tb-metric-value">{value}</div>
-    <div className="tb-metric-label">{label}</div>
+    <div className="text-2xl font-display font-bold text-foreground">{value}</div>
+    <div className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">{label}</div>
   </div>
 );
 
@@ -66,63 +67,50 @@ const TaskRow = ({ task, onView, onStatusUpdate }) => {
   const progressColor = task.status === 'completed' ? '#22c55e' : task.status === 'in_progress' ? '#0d9488' : '#f59e0b';
 
   return (
-    <tr className="tb-task-row" onClick={() => onView(task)}>
-      <td className="tb-td">
-        <div className="tb-task-name-cell">
-          <span className="tb-task-color-dot" style={{ background: p.color }} />
-          <span className="tb-task-title">{task.title}</span>
+    <tr className="border-b border-border/50 hover:bg-secondary/50 transition-colors cursor-pointer" onClick={() => onView(task)}>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: p.color }} />
+          <span className="text-sm font-semibold text-foreground">{task.title}</span>
         </div>
       </td>
-      <td className="tb-td">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div className="tb-owner-av" style={{ width: '22px', height: '22px', fontSize: '0.65rem' }}>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-black">
             {task.assigned_to_name ? task.assigned_to_name.charAt(0).toUpperCase() : '?'}
           </div>
-          <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>
-            {task.assigned_to_name || 'Unassigned'}
-          </span>
+          <span className="text-xs font-medium text-foreground">{task.assigned_to_name || 'Unassigned'}</span>
         </div>
       </td>
-      <td className="tb-td">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div className="tb-owner-av" style={{ width: '22px', height: '22px', fontSize: '0.65rem', background: '#94a3b8' }}>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-muted-foreground text-[10px] font-black">
             {task.assigned_by_name ? task.assigned_by_name.charAt(0).toUpperCase() : 'S'}
           </div>
-          <span style={{ fontSize: '0.8rem', color: 'var(--tb-text-sub)' }}>
-            {task.assigned_by_name || 'System'}
-          </span>
+          <span className="text-xs text-muted-foreground">{task.assigned_by_name || 'System'}</span>
         </div>
       </td>
-      <td className="tb-td">
-        <span className="tb-date-text">{fmtDate(task.due_date)}</span>
+      <td className="px-4 py-3">
+        <span className="text-xs text-muted-foreground font-semibold">{fmtDate(task.due_date)}</span>
       </td>
-      <td className="tb-td" onClick={(e) => e.stopPropagation()}>
+      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
         <select
-          className="tb-kanban-status-select"
+          className="rounded-lg border-none px-2 py-1 text-xs font-bold cursor-pointer outline-none"
           value={task.status}
           onChange={(e) => onStatusUpdate(task.id, e.target.value)}
-          style={{
-            background: s.bg,
-            color: s.color,
-            border: 'none',
-            borderRadius: '6px',
-            padding: '4px 8px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            outline: 'none'
-          }}
+          style={{ background: s.bg, color: s.color }}
         >
-          <option value="pending" style={{ background: 'var(--tb-card)', color: 'var(--tb-text)' }}>Pending</option>
-          <option value="in_progress" style={{ background: 'var(--tb-card)', color: 'var(--tb-text)' }}>In Progress</option>
-          <option value="completed" style={{ background: 'var(--tb-card)', color: 'var(--tb-text)' }}>Completed</option>
+          <option value="pending">Pending</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
         </select>
       </td>
-      <td className="tb-td">
-        <div className="tb-progress-wrap" style={{ minWidth: '90px' }}>
-          <div className="tb-progress-bar" style={{ height: '4px' }}>
-            <div className="tb-progress-fill" style={{ width: `${progressPct}%`, background: progressColor }} />
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2 min-w-[90px]">
+          <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
+            <div className="h-full rounded-full transition-all" style={{ width: `${progressPct}%`, background: progressColor }} />
           </div>
-          <span className="tb-progress-pct" style={{ fontSize: '0.7rem' }}>{progressPct}%</span>
+          <span className="text-[10px] font-bold text-muted-foreground shrink-0">{progressPct}%</span>
         </div>
       </td>
     </tr>
@@ -135,18 +123,18 @@ const ProjectRow = ({ project }) => {
   const pct = project.progress ?? 0;
   return (
     <tr className="tb-task-row">
-      <td className="tb-td">
+      <td className="px-4 py-3 border-b border-border/50 text-foreground">
         <div className="tb-task-name-cell">
           <div className="tb-proj-icon"><Briefcase size={13} /></div>
           <span className="tb-task-title">{project.name}</span>
         </div>
       </td>
-      <td className="tb-td">
+      <td className="px-4 py-3 border-b border-border/50 text-foreground">
         <span className="tb-status-badge" style={{ background: s.bg, color: s.color }}>
           {s.label}
         </span>
       </td>
-      <td className="tb-td">
+      <td className="px-4 py-3 border-b border-border/50 text-foreground">
         <div className="tb-progress-wrap">
           <div className="tb-progress-bar">
             <div className="tb-progress-fill" style={{ width: `${pct}%`, background: s.color }} />
@@ -154,11 +142,11 @@ const ProjectRow = ({ project }) => {
           <span className="tb-progress-pct">{pct}%</span>
         </div>
       </td>
-      <td className="tb-td"><span className="tb-date-text">{project.tasks ?? '—'}</span></td>
-      <td className="tb-td"><span className="tb-date-text">{fmtDate(project.due_date)}</span></td>
-      <td className="tb-td">
+      <td className="px-4 py-3 border-b border-border/50 text-foreground"><span className="tb-date-text">{project.tasks ?? '—'}</span></td>
+      <td className="px-4 py-3 border-b border-border/50 text-foreground"><span className="tb-date-text">{fmtDate(project.due_date)}</span></td>
+      <td className="px-4 py-3 border-b border-border/50 text-foreground">
         <div className="tb-owner-chip">
-          <div className="tb-owner-av">{(project.owner ?? 'U').charAt(0)}</div>
+          <div className="h-6 w-6 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center overflow-hidden">{(project.owner ?? 'U').charAt(0)}</div>
           <span>{project.owner ?? 'Unassigned'}</span>
         </div>
       </td>
@@ -338,7 +326,7 @@ const UserProfileModal = ({ member, onClose, assignedTasks, currentUser, createA
   return (
     <AnimatePresence>
       <motion.div
-        className="upm-overlay"
+        className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -430,7 +418,7 @@ const UserProfileModal = ({ member, onClose, assignedTasks, currentUser, createA
           </div>
 
           {/* Tab content */}
-          <div className="upm-body">
+          <div className="p-5 overflow-y-auto flex flex-col gap-4">
             {modalTab === 'tasks' && (
               <div className="upm-tasks-view">
                 {/* Filter chips */}
@@ -866,35 +854,33 @@ export const TaskBoard = () => {
   if (loading) return <div className="tb-loading">Preparing Workspace…</div>;
 
   return (
-    <div className="tb-wrapper">
+    <div className="space-y-6 pb-8">
 
       {/* ── PAGE HEADER ─────────────────────────────────────────────────── */}
       <motion.div
-        className="tb-page-header"
+        className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-        <div className="tb-page-header-left">
-          <div className="tb-breadcrumbs">
+        <div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
             <span>Workspace</span>
-            <ChevronRight size={14} />
-            <span className="tb-breadcrumb-active">Task Board</span>
+            <ChevronRight size={12} />
+            <span className="font-bold text-foreground">Task Board</span>
           </div>
-          <h1 className="tb-page-title">Dashboard</h1>
+          <h1 className="text-3xl font-display font-bold text-foreground">Task <span className="text-primary">Dashboard</span></h1>
         </div>
 
-        <div className="tb-page-header-right">
-          <div className="tb-header-meta">
-            <Clock size={14} />
-            <span>Last updated {new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Clock size={13} />
+            <span>Last updated {new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
           </div>
-          <div className="tb-header-avatars">
-            {['J', 'M', 'D'].map((l, i) => (
-              <div key={i} className="tb-header-av" style={{ zIndex: 3 - i }}>{l}</div>
-            ))}
-          </div>
-          <button className="tb-export-btn" onClick={() => setIsCreateAssignedOpen(true)}>
+          <button
+            className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:opacity-90 transition-opacity"
+            onClick={() => setIsCreateAssignedOpen(true)}
+          >
             <Plus size={15} /> New Task
           </button>
         </div>
@@ -902,27 +888,26 @@ export const TaskBoard = () => {
 
       {/* ── WELCOME BANNER ──────────────────────────────────────────────── */}
       <motion.div
-        className="tb-welcome-banner"
+        className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/5 via-primary/10 to-transparent p-6"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05, duration: 0.4 }}
       >
-        <div className="tb-welcome-text">
-          <h2>Welcome Back, {profile?.name?.split(' ')[0] || 'User'} 👋</h2>
-          <p>
-            <span className="tb-badge-pill">{stats.assignedToMe} Assigned to Me</span>
-            <span className="tb-badge-pill warning">{stats.assignedByMe} Assigned to Others</span>
-            <span className="tb-badge-pill info">{stats.total} Total System Tasks</span>
-          </p>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-xl font-display font-bold text-foreground">Welcome Back, {profile?.name?.split(' ')[0] || 'User'} 👋</h2>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{stats.assignedToMe} Assigned to Me</span>
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">{stats.assignedByMe} Assigned to Others</span>
+              <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700 dark:bg-sky-950/30 dark:text-sky-400">{stats.total} Total Tasks</span>
+            </div>
+          </div>
         </div>
-        <button className="tb-export-subtle-btn">
-          Export <ChevronDown size={14} />
-        </button>
       </motion.div>
 
       {/* ── METRIC CARDS ────────────────────────────────────────────────── */}
       <motion.div
-        className="tb-metrics-row"
+        className="grid grid-cols-2 gap-4 lg:grid-cols-4"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.4 }}
@@ -1095,25 +1080,25 @@ export const TaskBoard = () => {
       </div>
 
       {activeTab === 'overview' && (
-        <div className="tb-overview-layout">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Dashboard Section */}
-          <div className="tb-overview-main">
+          <div className="lg:col-span-2 flex flex-col gap-6">
             {/* Assigned Tasks Tracker */}
             <motion.div
-              className="tb-section-card"
+              className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15, duration: 0.4 }}
             >
-              <div className="tb-section-header" style={{ paddingBottom: '8px' }}>
+              <div className="p-4 border-b border-border flex items-center justify-between gap-3 flex-wrap bg-muted/20" style={{ paddingBottom: '8px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <h2 className="tb-section-title">Assigned Tasks Tracker</h2>
+                  <h2 className="text-sm font-bold text-foreground flex items-center gap-2">Assigned Tasks Tracker</h2>
                   <span style={{ fontSize: '0.75rem', color: 'var(--tb-text-muted)' }}>
                     Monitor progress and update task statuses in real-time.
                   </span>
                 </div>
-                <div className="tb-section-actions">
-                  <div className="tb-search-box">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 max-w-xs">
                     <Search size={14} />
                     <input
                       placeholder="Search by title..."
@@ -1121,7 +1106,7 @@ export const TaskBoard = () => {
                       onChange={e => setSearchQuery(e.target.value)}
                     />
                   </div>
-                  <button className="tb-filter-btn" onClick={() => setIsCreateAssignedOpen(true)}>
+                  <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card text-xs font-medium text-foreground hover:bg-accent transition-colors" onClick={() => setIsCreateAssignedOpen(true)}>
                     <Plus size={14} /> Assign Task
                   </button>
                 </div>
@@ -1152,16 +1137,16 @@ export const TaskBoard = () => {
                 </div>
               </div>
 
-              <div className="tb-table-wrapper desktop-only">
-                <table className="tb-table">
+              <div className="overflow-x-auto desktop-only">
+                <table className="w-full text-left text-sm">
                   <thead>
                     <tr>
-                      <th className="tb-th">Task Name</th>
-                      <th className="tb-th">Assigned To</th>
-                      <th className="tb-th">Assigned By</th>
-                      <th className="tb-th">Due Date</th>
-                      <th className="tb-th">Status</th>
-                      <th className="tb-th">Progress</th>
+                      <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Task Name</th>
+                      <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Assigned To</th>
+                      <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Assigned By</th>
+                      <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Due Date</th>
+                      <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Status</th>
+                      <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Progress</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1234,33 +1219,33 @@ export const TaskBoard = () => {
 
             {/* List Projects */}
             <motion.div
-              className="tb-section-card"
+              className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.4 }}
             >
-              <div className="tb-section-header">
-                <h2 className="tb-section-title">List Projects</h2>
-                <div className="tb-section-actions">
-                  <div className="tb-search-box">
+              <div className="p-4 border-b border-border flex items-center justify-between gap-3 flex-wrap bg-muted/20">
+                <h2 className="text-sm font-bold text-foreground flex items-center gap-2">List Projects</h2>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 max-w-xs">
                     <Search size={14} />
                     <input placeholder="Search here..." />
                   </div>
-                  <button className="tb-filter-btn">
+                  <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card text-xs font-medium text-foreground hover:bg-accent transition-colors">
                     <Filter size={14} /> Filter
                   </button>
                 </div>
               </div>
-              <div className="tb-table-wrapper desktop-only">
-                <table className="tb-table">
+              <div className="overflow-x-auto desktop-only">
+                <table className="w-full text-left text-sm">
                   <thead>
                     <tr>
-                      <th className="tb-th">Project Name</th>
-                      <th className="tb-th">Status</th>
-                      <th className="tb-th">Progress</th>
-                      <th className="tb-th">Total Tasks</th>
-                      <th className="tb-th">Due Date</th>
-                      <th className="tb-th">Owner</th>
+                      <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Project Name</th>
+                      <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Status</th>
+                      <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Progress</th>
+                      <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Total Tasks</th>
+                      <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Due Date</th>
+                      <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Owner</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1312,11 +1297,11 @@ export const TaskBoard = () => {
           </div>
 
           {/* Right Sidebar widgets */}
-          <div className="tb-overview-sidebar">
+          <div className="flex flex-col gap-6">
             
             {/* KPI Performance Dial Widget */}
-            <div className="tb-sidebar-widget kpi-dial-widget">
-              <h3 className="tb-widget-title">
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm flex flex-col gap-4 kpi-dial-widget">
+              <h3 className="text-sm font-bold text-foreground flex items-center justify-between">
                 <Activity size={16} className="text-accent" />
                 <span>My Performance KPIs</span>
               </h3>
@@ -1366,9 +1351,9 @@ export const TaskBoard = () => {
             </div>
 
             {/* Daily Tasks Checklist Widget */}
-            <div className="tb-sidebar-widget daily-tasks-widget">
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm flex flex-col gap-4 daily-tasks-widget">
               <div className="widget-header-row">
-                <h3 className="tb-widget-title">
+                <h3 className="text-sm font-bold text-foreground flex items-center justify-between">
                   <ListChecks size={16} className="text-success" />
                   <span>Daily Checklist</span>
                 </h3>
@@ -1416,8 +1401,8 @@ export const TaskBoard = () => {
             </div>
 
             {/* Urgent Priority Queue */}
-            <div className="tb-sidebar-widget priority-queue-widget">
-              <h3 className="tb-widget-title">
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm flex flex-col gap-4 priority-queue-widget">
+              <h3 className="text-sm font-bold text-foreground flex items-center justify-between">
                 <AlertCircle size={16} style={{ color: '#ef4444' }} />
                 <span>Urgent & High Queue</span>
               </h3>
@@ -1590,7 +1575,7 @@ export const TaskBoard = () => {
                 const selectedMember = userStatsList.find(m => m.id === selectedUserId) || userStatsList[0];
                 if (!selectedMember) {
                   return (
-                    <div className="tb-section-card" style={{ padding: '40px', textAlign: 'center', color: 'var(--tb-text-muted)' }}>
+                    <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden" style={{ padding: '40px', textAlign: 'center', color: 'var(--tb-text-muted)' }}>
                       Select a team member to view their assigned tasks.
                     </div>
                   );
@@ -1602,9 +1587,9 @@ export const TaskBoard = () => {
                 return (
                   <>
                     {/* Header Card */}
-                    <div className="tb-section-card" style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+                    <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden" style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div className="tb-owner-av" style={{ width: '48px', height: '48px', fontSize: '1.2rem' }}>
+                        <div className="h-6 w-6 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center overflow-hidden" style={{ width: '48px', height: '48px', fontSize: '1.2rem' }}>
                           {selectedMember.avatar_url ? (
                             <img src={selectedMember.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
                           ) : (
@@ -1637,10 +1622,10 @@ export const TaskBoard = () => {
                     </div>
 
                     {/* Section 1: Assigned By Me Tasks */}
-                    <div className="tb-section-card">
-                      <div className="tb-section-header" style={{ borderBottom: '1px solid var(--tb-border)' }}>
+                    <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+                      <div className="p-4 border-b border-border flex items-center justify-between gap-3 flex-wrap bg-muted/20" style={{ borderBottom: '1px solid var(--tb-border)' }}>
                         <div>
-                          <h3 className="tb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <h3 className="text-sm font-bold text-foreground flex items-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <ShieldCheck size={16} style={{ color: 'var(--tb-accent)' }} />
                             <span>Assigned By Me ({assignedByMeTasks.length})</span>
                           </h3>
@@ -1649,7 +1634,7 @@ export const TaskBoard = () => {
                           </span>
                         </div>
                         <button
-                          className="tb-filter-btn"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card text-xs font-medium text-foreground hover:bg-accent transition-colors"
                           onClick={() => {
                             setIsCreateAssignedOpen(true);
                           }}
@@ -1658,16 +1643,16 @@ export const TaskBoard = () => {
                         </button>
                       </div>
 
-                      <div className="tb-table-wrapper desktop-only">
-                        <table className="tb-table">
+                      <div className="overflow-x-auto desktop-only">
+                        <table className="w-full text-left text-sm">
                           <thead>
                             <tr>
-                              <th className="tb-th">Task Name</th>
-                              <th className="tb-th">Assigned To</th>
-                              <th className="tb-th">Assigned By</th>
-                              <th className="tb-th">Due Date</th>
-                              <th className="tb-th">Status</th>
-                              <th className="tb-th">Progress</th>
+                              <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Task Name</th>
+                              <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Assigned To</th>
+                              <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Assigned By</th>
+                              <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Due Date</th>
+                              <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Status</th>
+                              <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Progress</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1734,10 +1719,10 @@ export const TaskBoard = () => {
                     </div>
 
                     {/* Section 2: Other Assigned Tasks */}
-                    <div className="tb-section-card">
-                      <div className="tb-section-header">
+                    <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+                      <div className="p-4 border-b border-border flex items-center justify-between gap-3 flex-wrap bg-muted/20">
                         <div>
-                          <h3 className="tb-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <h3 className="text-sm font-bold text-foreground flex items-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Users size={16} />
                             <span>Other Assigned Tasks ({otherTasks.length})</span>
                           </h3>
@@ -1747,16 +1732,16 @@ export const TaskBoard = () => {
                         </div>
                       </div>
 
-                      <div className="tb-table-wrapper desktop-only">
-                        <table className="tb-table">
+                      <div className="overflow-x-auto desktop-only">
+                        <table className="w-full text-left text-sm">
                           <thead>
                             <tr>
-                              <th className="tb-th">Task Name</th>
-                              <th className="tb-th">Assigned To</th>
-                              <th className="tb-th">Assigned By</th>
-                              <th className="tb-th">Due Date</th>
-                              <th className="tb-th">Status</th>
-                              <th className="tb-th">Progress</th>
+                              <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Task Name</th>
+                              <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Assigned To</th>
+                              <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Assigned By</th>
+                              <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Due Date</th>
+                              <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Status</th>
+                              <th className="px-4 py-3 bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">Progress</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1901,7 +1886,7 @@ export const TaskBoard = () => {
               </p>
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '12px' }}>
                 <button
-                  className="tb-filter-btn"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card text-xs font-medium text-foreground hover:bg-accent transition-colors"
                   onClick={() => {
                     setShowReminderAlert(false);
                     const todayStr = new Date().toDateString();
@@ -1955,7 +1940,7 @@ export const TaskBoard = () => {
               </p>
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '12px' }}>
                 <button
-                  className="tb-filter-btn"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card text-xs font-medium text-foreground hover:bg-accent transition-colors"
                   onClick={() => {
                     setShowOverdueAlert(false);
                     const todayStr = new Date().toDateString();
