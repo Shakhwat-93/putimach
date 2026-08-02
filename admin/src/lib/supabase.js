@@ -46,7 +46,6 @@ const ORDERS_DB_TABLES = new Set([
   'assigned_tasks',
   'task_activity_logs',
   'notifications',
-  'system_configs',
   'ads_campaigns',
   'content_plans',
   'content_activity_logs',
@@ -68,17 +67,34 @@ export const supabase = new Proxy({}, {
         if (tableName === 'categories') {
           return supabaseOthers.from('cb_categories');
         }
-        if (tableName === 'site_settings') {
-          return supabaseOthers.from('cb_settings');
+        if (tableName === 'site_settings' || tableName === 'system_configs') {
+          const builder = supabaseOthers.from('cb_settings');
+          return new Proxy(builder, {
+            get(bTarget, bProp) {
+              if (bProp === 'select') {
+                return (columns = '*') => {
+                  const cols = (columns === 'value') ? 'data as value, id as key, data' : columns;
+                  return bTarget.select(cols);
+                };
+              }
+              if (bProp === 'eq') {
+                return (column, val) => {
+                  const col = (column === 'key') ? 'id' : column;
+                  return bTarget.eq(col, val);
+                };
+              }
+              const val = bTarget[bProp];
+              return typeof val === 'function' ? val.bind(bTarget) : val;
+            }
+          });
         }
+
         // Route order-specific tables to orders DB
         if (ORDERS_DB_TABLES.has(tableName)) {
           return supabaseOrders.from(tableName);
         }
-        // All other tables (users, user_roles, inventory, system_configs,
-        // notifications, ads_campaigns, content_plans, content_activity_logs,
-        // task_activity_logs, cb_products, cb_categories, cb_settings, etc.)
-        // live in the catalog DB (supabaseOthers)
+
+        // All other tables live in the catalog DB (supabaseOthers)
         return supabaseOthers.from(tableName);
       };
     }
