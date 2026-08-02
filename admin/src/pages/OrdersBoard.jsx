@@ -741,12 +741,16 @@ export const OrdersBoard = () => {
             {distributing ? 'Processing...' : 'AUTO DISTRIBUTE'}
           </Button>
 
-          {hasAnyRole(['Admin', 'Moderator']) && (
-            <Button onClick={() => setIsNewOrderModalOpen(true)}>
-              <Plus size={18} className="mr-2" />
-              <span>New Order</span>
-            </Button>
-          )}
+          <Button 
+            onClick={() => {
+              setSelectedOrderForEdit(null);
+              setIsNewOrderModalOpen(true);
+            }}
+            className="rounded-full font-bold gap-2"
+          >
+            <Plus size={18} />
+            <span>New Order</span>
+          </Button>
         </div>
       </motion.div>
 
@@ -1089,8 +1093,12 @@ export const OrdersBoard = () => {
       />
 
       <OrderEditModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
+        isOpen={isNewOrderModalOpen || isEditModalOpen}
+        onClose={() => {
+          setIsNewOrderModalOpen(false);
+          setIsEditModalOpen(false);
+          setSelectedOrderForEdit(null);
+        }}
         order={selectedOrderForEdit}
       />
 

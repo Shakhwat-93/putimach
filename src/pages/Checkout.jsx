@@ -599,169 +599,172 @@ export default function Checkout() {
           <h1 className="font-black text-3xl sm:text-4xl text-surface-primary">Complete Your Order</h1>
         </motion.div>
 
-        <div className="grid lg:grid-cols-5 gap-8 xl:gap-12">
+        <form onSubmit={handleSubmit} className="grid lg:grid-cols-5 gap-8 xl:gap-12">
           {/* ── Left: Form ───────────────────────────────────────────────── */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="lg:col-span-3"
+            className="lg:col-span-3 space-y-5"
           >
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Delivery Info Card */}
-              <div className="card p-5 sm:p-6 space-y-5">
-                <div className="flex items-center gap-2.5 mb-1">
-                  <div className="w-7 h-7 rounded-lg bg-brand/15 border border-brand/20 flex items-center justify-center">
-                    <Truck size={14} className="text-brand" />
-                  </div>
-                  <h2 className="font-black text-base text-surface-primary">Delivery Information</h2>
+            {/* Delivery Info Card */}
+            <div className="card p-5 sm:p-6 space-y-5">
+              <div className="flex items-center gap-2.5 mb-1">
+                <div className="w-7 h-7 rounded-lg bg-brand/15 border border-brand/20 flex items-center justify-center">
+                  <Truck size={14} className="text-brand" />
                 </div>
+                <h2 className="font-black text-base text-surface-primary">Delivery Information</h2>
+              </div>
 
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.97 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs"
-                  >
-                    {error}
-                  </motion.div>
-                )}
+              {error && (
+                <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold">
+                  ⚠️ {error}
+                </div>
+              )}
 
-                <Field label="Full Name" icon={User} required>
-                  <input
-                    required
-                    type="text"
-                    placeholder="e.g. Arif Rahman"
-                    value={form.name}
-                    onChange={setField('name')}
-                    className="input"
-                    id="checkout-name"
-                  />
-                </Field>
+              <Field label="Full Name" icon={User} required>
+                <input
+                  required
+                  type="text"
+                  placeholder="e.g. Arif Hossain"
+                  value={form.name}
+                  onChange={setField('name')}
+                  className="input"
+                  id="checkout-name"
+                />
+              </Field>
 
-                <Field label="Phone Number" icon={Phone} required hint="We'll call to confirm your order">
-                  <input
-                    required
-                    type="tel"
-                    placeholder="01XXXXXXXXX"
-                    value={form.phone}
-                    onChange={setField('phone')}
-                    className="input font-mono tracking-widest"
-                    id="checkout-phone"
-                  />
-                </Field>
+              <Field label="Phone Number" icon={Phone} required hint="11-digit mobile number for delivery contact">
+                <input
+                  required
+                  type="tel"
+                  placeholder="e.g. 01712345678"
+                  value={form.phone}
+                  onChange={setField('phone')}
+                  className="input font-mono"
+                  id="checkout-phone"
+                />
+              </Field>
 
-                <Field label="Email Address" icon={Mail} hint="Optional — For order updates and confirmations">
-                  <input
-                    type="email"
-                    placeholder="e.g. arif@email.com"
-                    value={form.email}
-                    onChange={setField('email')}
-                    className="input"
-                    id="checkout-email"
-                  />
-                </Field>
+              <Field label="Email Address" icon={Mail} hint="Optional — For order updates and confirmations">
+                <input
+                  type="email"
+                  placeholder="e.g. arif@email.com"
+                  value={form.email}
+                  onChange={setField('email')}
+                  className="input"
+                  id="checkout-email"
+                />
+              </Field>
 
-                <Field label="Shipping Area" icon={Truck} required>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {[
-                      { id: 'inside', label: 'Inside Dhaka', fee: shippingRates.inside, time: '2–3 days' },
-                      { id: 'sub', label: 'Sub Dhaka', fee: shippingRates.sub, time: '3–4 days' },
-                      { id: 'outside', label: 'Outside Dhaka', fee: shippingRates.outside, time: '3–5 days' }
-                    ].map((area) => {
-                      const isSelected = shippingArea === area.id;
-                      return (
-                        <div
-                          key={area.id}
-                          onClick={() => setShippingArea(area.id)}
-                          className={`cursor-pointer p-4 rounded-xl border-2 transition-all duration-200 flex flex-col justify-between ${
-                            isSelected
-                              ? 'border-brand bg-brand/5 shadow-glow-sm'
-                              : 'border-base-300 bg-base-950/40 hover:border-base-400'
-                          }`}
-                        >
-                          <div>
-                            <p className="font-bold text-xs text-surface-primary">{area.label}</p>
-                            <p className="text-[10px] text-surface-muted mt-0.5">{area.time}</p>
-                          </div>
-                          <p className="font-black text-sm text-brand mt-3">৳{area.fee}</p>
+              <Field label="Shipping Area" icon={Truck} required>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    { id: 'inside', label: 'Inside Dhaka', fee: shippingRates.inside },
+                    { id: 'sub', label: 'Sub Dhaka', subtitle: 'Narayanganj, Gazipur, Keraniganj', fee: shippingRates.sub },
+                    { id: 'outside', label: 'Outside Dhaka', fee: shippingRates.outside }
+                  ].map((area) => {
+                    const isSelected = shippingArea === area.id;
+                    return (
+                      <div
+                        key={area.id}
+                        onClick={() => setShippingArea(area.id)}
+                        className={`cursor-pointer p-4 rounded-xl border-2 transition-all duration-200 flex flex-col justify-between ${
+                          isSelected
+                            ? 'border-brand bg-brand/5 shadow-glow-sm'
+                            : 'border-base-300 bg-base-950/40 hover:border-base-400'
+                        }`}
+                      >
+                        <div>
+                          <p className="font-bold text-xs text-surface-primary">{area.label}</p>
+                          {area.subtitle && (
+                            <p className="text-[10px] font-semibold text-brand mt-0.5 leading-tight">{area.subtitle}</p>
+                          )}
                         </div>
-                      );
-                    })}
-                  </div>
-                </Field>
-
-                <Field label="City / District" icon={MapPin} required hint="Enter your specific district or city name">
-                  <input
-                    required
-                    type="text"
-                    placeholder="e.g. Dhaka, Chittagong, Sylhet, Savar..."
-                    value={form.city}
-                    onChange={setField('city')}
-                    list="city-suggestions"
-                    className="input"
-                    id="checkout-city"
-                  />
-                  <datalist id="city-suggestions">
-                    {['Dhaka', 'Chittagong', 'Sylhet', 'Rajshahi', 'Khulna', 'Barisal', 'Comilla', 'Gazipur', 'Narayanganj', 'Savar'].map(c => (
-                      <option key={c} value={c} />
-                    ))}
-                  </datalist>
-                </Field>
-
-                <Field label="Full Address" icon={MapPin} required hint="House/flat no., road, area">
-                  <textarea
-                    required
-                    rows={2}
-                    placeholder="House 12, Road 5, Mirpur-10..."
-                    value={form.address}
-                    onChange={setField('address')}
-                    className="input resize-none"
-                    id="checkout-address"
-                  />
-                </Field>
-
-                <Field label="Order Note" icon={MessageSquare}>
-                  <textarea
-                    rows={2}
-                    placeholder="Any special instructions? (optional)"
-                    value={form.note}
-                    onChange={setField('note')}
-                    className="input resize-none"
-                    id="checkout-note"
-                  />
-                </Field>
-              </div>
-
-              {/* Payment Method Card */}
-              <div className="card p-5 sm:p-6">
-                <div className="flex items-center gap-2.5 mb-4">
-                  <div className="w-7 h-7 rounded-lg bg-brand/15 border border-brand/20 flex items-center justify-center">
-                    <CreditCard size={14} className="text-brand" />
-                  </div>
-                  <h2 className="font-black text-base text-surface-primary">Payment Method</h2>
+                        <p className="font-black text-sm text-brand mt-3">৳{area.fee}</p>
+                      </div>
+                    );
+                  })}
                 </div>
+              </Field>
 
-                <div className="p-4 rounded-xl border-2 border-brand/40 bg-brand/5 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-brand/20 flex items-center justify-center flex-shrink-0">
-                    <Zap size={18} className="text-brand" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-sm text-surface-primary">Cash on Delivery</p>
-                    <p className="text-[10px] text-surface-muted mt-0.5">Pay when you receive your order</p>
-                  </div>
-                  <div className="ml-auto w-5 h-5 rounded-full border-2 border-brand flex items-center justify-center flex-shrink-0">
-                    <div className="w-2.5 h-2.5 rounded-full bg-brand" />
-                  </div>
+              <Field label="City / District" icon={MapPin} required hint="Enter your specific district or city name">
+                <input
+                  required
+                  type="text"
+                  placeholder="e.g. Dhaka, Chittagong, Sylhet, Savar..."
+                  value={form.city}
+                  onChange={setField('city')}
+                  list="city-suggestions"
+                  className="input"
+                  id="checkout-city"
+                />
+                <datalist id="city-suggestions">
+                  {['Dhaka', 'Chittagong', 'Sylhet', 'Rajshahi', 'Khulna', 'Barisal', 'Comilla', 'Gazipur', 'Narayanganj', 'Savar'].map(c => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </Field>
+
+              <Field label="Full Address" icon={MapPin} required hint="House/flat no., road, area">
+                <textarea
+                  required
+                  rows={2}
+                  placeholder="House 12, Road 5, Mirpur-10..."
+                  value={form.address}
+                  onChange={setField('address')}
+                  className="input resize-none"
+                  id="checkout-address"
+                />
+              </Field>
+
+              <Field label="Order Note" icon={MessageSquare}>
+                <textarea
+                  rows={2}
+                  placeholder="Any special instructions? (optional)"
+                  value={form.note}
+                  onChange={setField('note')}
+                  className="input resize-none"
+                  id="checkout-note"
+                />
+              </Field>
+            </div>
+
+            {/* Payment Method Card */}
+            <div className="card p-5 sm:p-6">
+              <div className="flex items-center gap-2.5 mb-4">
+                <div className="w-7 h-7 rounded-lg bg-brand/15 border border-brand/20 flex items-center justify-center">
+                  <CreditCard size={14} className="text-brand" />
+                </div>
+                <h2 className="font-black text-base text-surface-primary">Payment Method</h2>
+              </div>
+
+              <div className="p-4 rounded-xl border-2 border-brand/40 bg-brand/5 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-brand/20 flex items-center justify-center flex-shrink-0">
+                  <Zap size={18} className="text-brand" />
+                </div>
+                <div>
+                  <p className="font-bold text-sm text-surface-primary">Cash on Delivery</p>
+                  <p className="text-[10px] text-surface-muted mt-0.5">Pay when you receive your order</p>
+                </div>
+                <div className="ml-auto w-5 h-5 rounded-full border-2 border-brand flex items-center justify-center flex-shrink-0">
+                  <div className="w-2.5 h-2.5 rounded-full bg-brand" />
                 </div>
               </div>
+            </div>
+          </motion.div>
 
-              {/* Mobile order summary */}
-              <div className="lg:hidden card p-5">
-                <OrderSummary items={items} subtotal={subtotal} shipping={shipping} total={total} />
-              </div>
+          {/* ── Right: Order Summary (Desktop & Mobile) ───────────────────────────── */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="lg:col-span-2"
+          >
+            <div className="card p-5 sm:p-6 sticky top-24 space-y-5">
+              <OrderSummary items={items} subtotal={subtotal} shipping={shipping} total={total} />
 
-              {/* Submit button */}
+              {/* Submit Place Order Button */}
               <motion.button
                 type="submit"
                 disabled={submitting || items.length === 0}
@@ -787,21 +790,9 @@ export default function Checkout() {
                 By placing your order you agree to our Terms & Privacy Policy.
                 Your data is secure and encrypted.
               </p>
-            </form>
-          </motion.div>
-
-          {/* ── Right: Order Summary (Desktop) ───────────────────────────── */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="hidden lg:block lg:col-span-2"
-          >
-            <div className="card p-6 sticky top-24">
-              <OrderSummary items={items} subtotal={subtotal} shipping={shipping} total={total} />
             </div>
           </motion.div>
-        </div>
+        </form>
       </div>
     </div>
   );

@@ -357,19 +357,23 @@ export const OrderProvider = ({ children }) => {
 
   const addInventoryItem = async (item) => {
     try {
-      await api.createInventoryItem(item);
+      const res = await api.createInventoryItem(item);
       fetchInventory();
+      return res;
     } catch (error) {
       console.error('Error adding inventory item:', error);
+      throw error;
     }
   };
 
   const updateInventoryItem = async (id, updates) => {
     try {
-      await api.updateInventoryItem(id, updates);
+      const res = await api.updateInventoryItem(id, updates);
       fetchInventory();
+      return res;
     } catch (error) {
       console.error('Error updating inventory item:', error);
+      throw error;
     }
   };
 

@@ -61,12 +61,18 @@ const ImageUploadInput = ({ label, value, onChange, placeholder, required = fals
         body: formData,
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Upload failed');
+      const text = await res.text();
+      let resData = {};
+      try {
+        resData = text ? JSON.parse(text) : {};
+      } catch (e) {
+        throw new Error(`Upload server error (${res.status}). Ensure backend server (server.js) is running.`);
       }
 
-      const resData = await res.json();
+      if (!res.ok || !resData.url) {
+        throw new Error(resData.error || resData.message || `Upload failed (${res.status})`);
+      }
+
       onChange(resData.url);
     } catch (err) {
       console.error('Upload error:', err);
@@ -160,12 +166,18 @@ const MultipleImageUploadInput = ({ label, value = [], onChange }) => {
           body: formData,
         });
 
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || 'Upload failed');
+        const text = await res.text();
+        let resData = {};
+        try {
+          resData = text ? JSON.parse(text) : {};
+        } catch (e) {
+          throw new Error(`Upload server error (${res.status}). Ensure backend server (server.js) is running.`);
         }
 
-        const resData = await res.json();
+        if (!res.ok || !resData.url) {
+          throw new Error(resData.error || resData.message || `Upload failed (${res.status})`);
+        }
+
         uploadedUrls.push(resData.url);
       }
 
@@ -349,6 +361,7 @@ const SizeGuideTableEditor = ({ value, onChange }) => {
   const columns = value?.columns || ['Size', 'Waist', 'Hips', 'Length'];
   const rows = value?.rows || [];
   const material = value?.material || 'Cotton 100%';
+  const image_url = value?.image_url || value?.chart_image || '';
 
   const [newColName, setNewColName] = useState('');
 
@@ -361,7 +374,7 @@ const SizeGuideTableEditor = ({ value, onChange }) => {
     }
     const updatedCols = [...columns, name];
     const updatedRows = rows.map(row => ({ ...row, [name]: '' }));
-    onChange({ columns: updatedCols, rows: updatedRows, material });
+    onChange({ columns: updatedCols, rows: updatedRows, material, image_url });
     setNewColName('');
   };
 
@@ -377,7 +390,7 @@ const SizeGuideTableEditor = ({ value, onChange }) => {
       delete copy[colName];
       return copy;
     });
-    onChange({ columns: updatedCols, rows: updatedRows, material });
+    onChange({ columns: updatedCols, rows: updatedRows, material, image_url });
   };
 
   const addRow = () => {
@@ -385,37 +398,53 @@ const SizeGuideTableEditor = ({ value, onChange }) => {
     columns.forEach(col => {
       newRow[col] = '';
     });
-    onChange({ columns, rows: [...rows, newRow], material });
+    onChange({ columns, rows: [...rows, newRow], material, image_url });
   };
 
   const removeRow = (index) => {
     const updatedRows = rows.filter((_, idx) => idx !== index);
-    onChange({ columns, rows: updatedRows, material });
+    onChange({ columns, rows: updatedRows, material, image_url });
   };
 
   const handleCellChange = (rowIndex, colName, val) => {
     const updatedRows = [...rows];
     updatedRows[rowIndex] = { ...updatedRows[rowIndex], [colName]: val };
-    onChange({ columns, rows: updatedRows, material });
+    onChange({ columns, rows: updatedRows, material, image_url });
   };
 
   const handleMaterialChange = (val) => {
-    onChange({ columns, rows, material: val });
+    onChange({ columns, rows, material: val, image_url });
+  };
+
+  const handleImageChange = (url) => {
+    onChange({ columns, rows, material, image_url: url });
   };
 
   return (
-    <div className="flex flex-col gap-2 md:col-span-2" style={{ marginTop: '16px', borderTop: '1px solid var(--glass-border)', paddingTop: '20px', gridColumn: '1 / -1' }}>
-      <label className="text-sm font-medium text-foreground" style={{ fontSize: '13px', color: 'var(--accent)', marginBottom: '8px', display: 'block' }}>Size Chart Builder</label>
-      
-      {/* Material/Composition field */}
-      <div className="flex flex-col gap-2" style={{ marginBottom: '16px', maxWidth: '300px' }}>
-        <label className="text-sm font-medium text-foreground" style={{ fontSize: '10px' }}>Material / Composition</label>
-        <input 
-          type="text" 
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-          value={material} 
-          onChange={(e) => handleMaterialChange(e.target.value)}
-          placeholder="e.g. Cotton 100%"
+    <div className="flex flex-col gap-3 md:col-span-2 mt-4 pt-4 border-t border-border font-sans">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Size Chart & Guide</label>
+        <span className="text-[10px] text-muted-foreground">Table & Visual Diagram Upload</span>
+      </div>
+
+      {/* Material & Size Chart Image Upload Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-foreground">Material / Fabric Composition</label>
+          <input 
+            type="text" 
+            className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20" 
+            value={material} 
+            onChange={(e) => handleMaterialChange(e.target.value)}
+            placeholder="e.g. Cotton 100%, Heavyweight Fleece"
+          />
+        </div>
+
+        <ImageUploadInput
+          label="Size Chart Diagram Image (Optional)"
+          value={image_url}
+          onChange={handleImageChange}
+          placeholder="e.g. /uploads/img_size_chart.webp"
         />
       </div>
 
@@ -2485,19 +2514,15 @@ export const StorefrontManagement = () => {
         </div>
       )}
 
-      {/* PRODUCT MODAL */}
-
-      <Modal isOpen={isProductModalOpen} onClose={() => setIsProductModalOpen(false)}>
-        <div className="p-4 space-y-4">
-          <div className="flex justify-between items-center border-b border-base-800 pb-3">
-            <h2 className="text-h3 font-black">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
-            <button className="btn-icon" onClick={() => setIsProductModalOpen(false)}>
-              <X size={18} />
-            </button>
-          </div>
-
-          <form onSubmit={saveProductSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Modal 
+        isOpen={isProductModalOpen} 
+        onClose={() => setIsProductModalOpen(false)}
+        title={editingProduct ? 'Edit Storefront Product' : 'Add New Product'}
+        subtitle="Configure product details, stock synchronization, pricing, and media gallery."
+        size="lg"
+      >
+        <form onSubmit={saveProductSubmit} className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-foreground">Product Name</label>
                 <input 
@@ -2801,81 +2826,76 @@ export const StorefrontManagement = () => {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-border">
-              <Button variant="ghost" type="button" onClick={() => setIsProductModalOpen(false)}>Cancel</Button>
-              <Button variant="primary" type="submit" disabled={saveLoading} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border mt-6">
+              <Button variant="ghost" type="button" onClick={() => setIsProductModalOpen(false)} className="rounded-full px-5 py-2 text-xs font-bold">Cancel</Button>
+              <Button variant="primary" type="submit" disabled={saveLoading} className="rounded-full px-6 py-2 text-xs font-bold gap-2">
                 {saveLoading ? <Loader2 size={16} className="spin" /> : <Save size={16} />} Save Product
               </Button>
             </div>
           </form>
-        </div>
       </Modal>
 
       {/* CATEGORY MODAL */}
-      <Modal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)}>
-        <div className="p-4 space-y-4">
-          <div className="flex justify-between items-center border-b border-base-800 pb-3">
-            <h2 className="text-h3 font-black">{editingCategory ? 'Edit Category' : 'Add New Category'}</h2>
-            <button className="btn-icon" onClick={() => setIsCategoryModalOpen(false)}>
-              <X size={18} />
-            </button>
+      <Modal 
+        isOpen={isCategoryModalOpen} 
+        onClose={() => setIsCategoryModalOpen(false)}
+        title={editingCategory ? 'Edit Category' : 'Add New Category'}
+        subtitle="Manage storefront categories, image banner, and URL slugs."
+      >
+        <form onSubmit={saveCategorySubmit} className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-foreground">Category Name</label>
+              <input 
+                type="text" 
+                className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" 
+                value={catForm.name}
+                onChange={handleCatNameChange}
+                required 
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-semibold text-foreground flex justify-between items-center">
+                <span>URL Slug</span>
+                <span className="text-[10px] text-primary flex items-center gap-1 cursor-pointer font-bold" onClick={() => setCatForm({ ...catForm, slug: generateSlug(catForm.name) })}>
+                  <Sparkles size={10} /> Auto
+                </span>
+              </label>
+              <input 
+                type="text" 
+                className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" 
+                value={catForm.slug}
+                onChange={(e) => setCatForm({ ...catForm, slug: generateSlug(e.target.value) })}
+                required 
+              />
+            </div>
+
+            <ImageUploadInput
+              label="Category Image URL"
+              value={catForm.image_url}
+              onChange={(val) => setCatForm({ ...catForm, image_url: val })}
+              placeholder="e.g. /images/cat-hoodies.webp"
+            />
+
+            <div className="flex flex-col gap-2 md:col-span-2">
+              <label className="text-xs font-semibold text-foreground">Description</label>
+              <textarea 
+                className="flex min-h-[80px] w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" 
+                value={catForm.description}
+                onChange={(e) => setCatForm({ ...catForm, description: e.target.value })}
+                required
+              />
+            </div>
           </div>
 
-          <form onSubmit={saveCategorySubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-foreground">Category Name</label>
-                <input 
-                  type="text" 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                  value={catForm.name}
-                  onChange={handleCatNameChange}
-                  required 
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="sf-label flex justify-between items-center">
-                  <span>URL Slug</span>
-                  <span className="text-[10px] text-brand flex items-center gap-1 cursor-pointer" onClick={() => setCatForm({ ...catForm, slug: generateSlug(catForm.name) })}>
-                    <Sparkles size={10} /> Auto
-                  </span>
-                </label>
-                <input 
-                  type="text" 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                  value={catForm.slug}
-                  onChange={(e) => setCatForm({ ...catForm, slug: generateSlug(e.target.value) })}
-                  required 
-                />
-              </div>
-
-              <ImageUploadInput
-                label="Category Image URL"
-                value={catForm.image_url}
-                onChange={(val) => setCatForm({ ...catForm, image_url: val })}
-                placeholder="e.g. /images/cat-hoodies.webp"
-              />
-
-              <div className="flex flex-col gap-2 md:col-span-2">
-                <label className="text-sm font-medium text-foreground">Description</label>
-                <textarea 
-                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
-                  value={catForm.description}
-                  onChange={(e) => setCatForm({ ...catForm, description: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-border">
-              <Button variant="ghost" type="button" onClick={() => setIsCategoryModalOpen(false)}>Cancel</Button>
-              <Button variant="primary" type="submit" disabled={saveLoading} className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
-                {saveLoading ? <Loader2 size={16} className="spin" /> : <Save size={16} />} Save Category
-              </Button>
-            </div>
-          </form>
-        </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-border mt-6">
+            <Button variant="ghost" type="button" onClick={() => setIsCategoryModalOpen(false)} className="rounded-full px-5 py-2 text-xs font-bold">Cancel</Button>
+            <Button variant="primary" type="submit" disabled={saveLoading} className="rounded-full px-6 py-2 text-xs font-bold gap-2">
+              {saveLoading ? <Loader2 size={16} className="spin" /> : <Save size={16} />} Save Category
+            </Button>
+          </div>
+        </form>
       </Modal>
 
       {/* Global Confirmation Dialog */}

@@ -53,8 +53,8 @@ export default function ProductCard({ product, index = 0 }) {
     navigate('/checkout');
   };
 
-  const discount = originalPrice
-    ? Math.round((1 - product.price / originalPrice) * 100)
+  const discount = (originalPrice && Number(originalPrice) > Number(product.price))
+    ? Math.round(((Number(originalPrice) - Number(product.price)) / Number(originalPrice)) * 100)
     : null;
 
   return (

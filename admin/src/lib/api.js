@@ -2255,19 +2255,34 @@ export const api = {
   },
 
   /**
+   * Helper to build clean inventory payload containing only valid database columns
+   */
+  buildInventoryPayload(itemData) {
+    const allowedKeys = ['name', 'sku', 'category', 'current_stock', 'min_stock_level', 'unit_price', 'making_cost', 'selling_price', 'supports_serial_tracking'];
+    const payload = {};
+    for (const key of allowedKeys) {
+      if (Object.prototype.hasOwnProperty.call(itemData, key) && itemData[key] !== undefined) {
+        payload[key] = itemData[key];
+      }
+    }
+    if (payload.unit_price !== undefined) payload.unit_price = Number(payload.unit_price) || 0;
+    if (payload.selling_price !== undefined || payload.unit_price !== undefined) {
+      payload.selling_price = Number(payload.selling_price) || Number(payload.unit_price) || 0;
+    }
+    if (payload.making_cost !== undefined) payload.making_cost = Number(payload.making_cost) || 0;
+    if (payload.current_stock !== undefined) payload.current_stock = Number(payload.current_stock) || 0;
+    if (payload.min_stock_level !== undefined) payload.min_stock_level = Number(payload.min_stock_level) || 0;
+    if (payload.supports_serial_tracking !== undefined) {
+      payload.supports_serial_tracking = Boolean(payload.supports_serial_tracking);
+    }
+    return payload;
+  },
+
+  /**
    * Create new product in inventory
    */
   async createInventoryItem(itemData) {
-    const payload = {
-      ...itemData,
-      // selling_price is the customer-facing price; making_cost is the production cost
-      unit_price:   Number(itemData.unit_price)    || 0,
-      selling_price: Number(itemData.selling_price) || Number(itemData.unit_price) || 0,
-      making_cost:  Number(itemData.making_cost)   || 0,
-      current_stock: Number(itemData.current_stock) || 0,
-      min_stock_level: Number(itemData.min_stock_level) || 0,
-      supports_serial_tracking: Boolean(itemData.supports_serial_tracking)
-    };
+    const payload = this.buildInventoryPayload(itemData);
 
     let { data, error } = await supabase
       .from('inventory')
@@ -2293,26 +2308,7 @@ export const api = {
    * Update product details
    */
   async updateInventoryItem(id, updates) {
-    const payload = { ...updates };
-
-    if (Object.prototype.hasOwnProperty.call(updates, 'unit_price')) {
-      payload.unit_price = Number(updates.unit_price) || 0;
-    }
-    if (Object.prototype.hasOwnProperty.call(updates, 'selling_price')) {
-      payload.selling_price = Number(updates.selling_price) || 0;
-    }
-    if (Object.prototype.hasOwnProperty.call(updates, 'making_cost')) {
-      payload.making_cost = Number(updates.making_cost) || 0;
-    }
-    if (Object.prototype.hasOwnProperty.call(updates, 'current_stock')) {
-      payload.current_stock = Number(updates.current_stock) || 0;
-    }
-    if (Object.prototype.hasOwnProperty.call(updates, 'min_stock_level')) {
-      payload.min_stock_level = Number(updates.min_stock_level) || 0;
-    }
-    if (Object.prototype.hasOwnProperty.call(updates, 'supports_serial_tracking')) {
-      payload.supports_serial_tracking = Boolean(updates.supports_serial_tracking);
-    }
+    const payload = this.buildInventoryPayload(updates);
 
     let { data, error } = await supabase
       .from('inventory')

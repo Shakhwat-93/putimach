@@ -173,12 +173,18 @@ export const CampaignEntryModal = ({ isOpen, onClose, onSave, initialData = null
           body: formData,
         });
 
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || 'Upload failed');
+        const text = await res.text();
+        let resData = {};
+        try {
+          resData = text ? JSON.parse(text) : {};
+        } catch (e) {
+          throw new Error(`Upload server error (${res.status}). Ensure backend server is running.`);
         }
 
-        const resData = await res.json();
+        if (!res.ok || !resData.url) {
+          throw new Error(resData.error || resData.message || `Upload failed (${res.status})`);
+        }
+
         urls.push(resData.url);
       } catch (err) {
         console.warn('WebP conversion or upload failed:', err.message);

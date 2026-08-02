@@ -112,7 +112,7 @@ function Hero({ settings }) {
 function Collections({ settings, categories }) {
   if (!categories || categories.length === 0) return null;
 
-  const list = categories.slice(0, 3).map(cat => ({
+  const list = categories.map(cat => ({
     id: cat.slug,
     label: cat.name,
     image: cat.image_url || 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=650&q=70'
@@ -120,32 +120,47 @@ function Collections({ settings, categories }) {
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
-      <div className="text-center space-y-3 mb-12">
-        <p className="text-[10px] font-bold text-[#C5A880] uppercase tracking-[0.25em] font-serif">
-          {settings.collectionsLabel || 'THE SECTIONS'}
-        </p>
-        <h2 className="text-3xl font-serif text-[#1C1613] uppercase tracking-wider">
-          {settings.collectionsTitle || 'Browse Curated Archives'}
-        </h2>
+      <div className="flex items-baseline justify-between border-b border-[#E9E2D2] pb-3 mb-6">
+        <div>
+          <p className="text-[10px] font-bold text-[#C5A880] uppercase tracking-[0.25em] font-serif mb-1">
+            {settings.collectionsLabel || 'THE SECTIONS'}
+          </p>
+          <h2 className="text-lg font-serif text-[#1C1613] uppercase tracking-wider">
+            {settings.collectionsTitle || 'Browse Curated Archives'}
+          </h2>
+        </div>
+        <Link 
+          to="/shop" 
+          className="text-xs font-semibold text-[#C5A880] uppercase tracking-widest hover:text-[#1C1613] transition-colors font-sans flex-shrink-0"
+        >
+          View All
+        </Link>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Horizontal Scroll Slider */}
+      <div 
+        className="flex gap-3 overflow-x-auto pb-4 scrollbar-none -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0"
+        style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}
+      >
         {list.map((cat, idx) => (
-          <Link 
+          <Link
             key={idx}
-            to={`/shop?category=${cat.id}`} 
-            className="relative block aspect-[16/10] md:aspect-[4/3] overflow-hidden group border border-[#E9E2D2]"
+            to={`/shop?category=${cat.id}`}
+            style={{ scrollSnapAlign: 'start', flexShrink: 0 }}
+            className="relative w-32 sm:w-40 h-44 sm:h-52 rounded-xl overflow-hidden group border border-[#E9E2D2] block"
           >
-            <img 
-              src={cat.image} 
-              alt={`${cat.label} Collection`} 
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-              loading="lazy" 
+            <img
+              src={cat.image}
+              alt={`${cat.label} Collection`}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              loading="lazy"
             />
-            <div className="absolute inset-0 bg-[#1C1613]/20 group-hover:bg-[#1C1613]/30 transition-colors"></div>
-            <div className="absolute inset-0 flex flex-col justify-end p-6">
-              <span className="text-[9px] font-bold text-[#C5A880] uppercase tracking-widest mb-1 font-serif">Explore Range</span>
-              <h3 className="text-xl font-serif text-white uppercase tracking-wider">{cat.label}</h3>
+            {/* Dark overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#1C1613]/75 via-[#1C1613]/10 to-transparent group-hover:from-[#1C1613]/85 transition-all duration-300" />
+            {/* Label */}
+            <div className="absolute inset-0 flex flex-col justify-end p-3">
+              <span className="text-[8px] font-bold text-[#C5A880] uppercase tracking-widest mb-0.5 font-serif leading-none">Explore</span>
+              <h3 className="text-xs sm:text-sm font-serif text-white uppercase tracking-wide leading-tight">{cat.label}</h3>
             </div>
           </Link>
         ))}

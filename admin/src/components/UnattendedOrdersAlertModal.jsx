@@ -77,7 +77,15 @@ export const UnattendedOrdersAlertModal = () => {
   const { user, profile, userRoles } = useAuth();
   
   const [unattendedItems, setUnattendedItems] = useState([]);
-  const [snoozeUntil, setSnoozeUntil] = useState(0);
+  const [snoozeUntil, setSnoozeUntil] = useState(() => {
+    try {
+      const stored = localStorage.getItem('of_unattended_snooze_until');
+      const val = stored ? Number(stored) : 0;
+      return Number.isFinite(val) ? val : 0;
+    } catch {
+      return 0;
+    }
+  });
   const [soundMuted, setSoundMuted] = useState(() => {
     return localStorage.getItem('of_unattended_sound_muted') === 'true';
   });
@@ -161,9 +169,15 @@ export const UnattendedOrdersAlertModal = () => {
     });
   };
 
-  // Snooze alert for 10 minutes
-  const handleSnooze = () => {
-    setSnoozeUntil(Date.now() + 10 * 60 * 1000);
+  // Snooze alert for specified minutes (default 10) and save to localStorage
+  const handleSnooze = (minutes = 10) => {
+    const until = Date.now() + minutes * 60 * 1000;
+    setSnoozeUntil(until);
+    try {
+      localStorage.setItem('of_unattended_snooze_until', String(until));
+    } catch (e) {
+      console.warn('Failed to save snooze setting:', e);
+    }
   };
 
   // Quick Action Logger
@@ -235,8 +249,17 @@ export const UnattendedOrdersAlertModal = () => {
               </div>
             </div>
             
-            <div className="sound-toggle-btn" onClick={toggleSound} title={soundMuted ? "Unmute Sound" : "Mute Sound"}>
-              {soundMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+            <div className="flex items-center gap-2">
+              <div className="sound-toggle-btn" onClick={toggleSound} title={soundMuted ? "Unmute Sound" : "Mute Sound"}>
+                {soundMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+              </div>
+              <button 
+                onClick={() => handleSnooze(10)} 
+                className="w-8 h-8 rounded-full bg-red-500/20 hover:bg-red-500/40 text-white flex items-center justify-center transition-colors" 
+                title="Close / Snooze 10 Min"
+              >
+                <X size={16} />
+              </button>
             </div>
           </div>
 
@@ -342,9 +365,18 @@ export const UnattendedOrdersAlertModal = () => {
           </div>
 
           {/* Bottom snoozes */}
-          <div className="alert-modal-footer">
-            <button className="snooze-action-btn" onClick={handleSnooze}>
-              Snooze Alert for 10 Min
+          <div className="alert-modal-footer flex flex-wrap gap-2 justify-center">
+            <button className="snooze-action-btn" onClick={() => handleSnooze(10)}>
+              Snooze 10 Min
+            </button>
+            <button className="snooze-action-btn opacity-80 hover:opacity-100" onClick={() => handleSnooze(30)}>
+              30 Min
+            </button>
+            <button className="snooze-action-btn opacity-80 hover:opacity-100" onClick={() => handleSnooze(60)}>
+              1 Hour
+            </button>
+            <button className="snooze-action-btn opacity-60 hover:opacity-100" onClick={() => handleSnooze(1440)}>
+              Dismiss 24h
             </button>
           </div>
         </motion.div>

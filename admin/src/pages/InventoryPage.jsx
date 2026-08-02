@@ -193,24 +193,39 @@ export const InventoryPage = () => {
     setIsProductModalOpen(true);
   };
 
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+
   const handleSaveProduct = async (e) => {
     e.preventDefault();
-    const hasVariants = formData.variants && formData.variants.length > 0;
-    const finalStock = hasVariants
-      ? formData.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
-      : formData.current_stock;
-      
-    const payload = {
-      ...formData,
-      current_stock: finalStock
-    };
-
-    if (editingProduct) {
-      await updateInventoryItem(editingProduct.id, payload);
-    } else {
-      await addInventoryItem(payload);
+    if (!formData.name?.trim()) {
+      alert('Product name is required');
+      return;
     }
-    setIsProductModalOpen(false);
+    setIsSavingProduct(true);
+    try {
+      const hasVariants = formData.variants && formData.variants.length > 0;
+      const finalStock = hasVariants
+        ? formData.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
+        : Number(formData.current_stock) || 0;
+        
+      const payload = {
+        ...formData,
+        name: formData.name.trim(),
+        current_stock: finalStock
+      };
+
+      if (editingProduct) {
+        await updateInventoryItem(editingProduct.id, payload);
+      } else {
+        await addInventoryItem(payload);
+      }
+      setIsProductModalOpen(false);
+    } catch (err) {
+      console.error('Save product error:', err);
+      alert('Failed to save product: ' + (err.message || 'Please check input data and try again.'));
+    } finally {
+      setIsSavingProduct(false);
+    }
   };
 
   const serialTrackedProducts = getSerialTrackedProducts(inventory);
@@ -670,19 +685,19 @@ export const InventoryPage = () => {
         subtitle={editingProduct ? 'Refine inventory details, stock thresholds, and price without breaking flow.' : 'Create a clean product record with pricing and stock logic.'}
       >
         <form onSubmit={handleSaveProduct} className="space-y-6">
-          <div className="flex gap-4 p-4 rounded-xl bg-secondary/50 border border-border">
-            <div className="mt-1 p-2 bg-primary/10 text-primary rounded-lg shrink-0 h-fit">
-              <Package size={20} />
+          <div className="flex gap-3 p-3 rounded-xl bg-secondary/40 border border-border text-xs">
+            <div className="p-2 bg-primary/10 text-primary rounded-lg shrink-0 h-fit">
+              <Package size={18} />
             </div>
             <div>
-              <span className="text-xs font-semibold text-primary uppercase tracking-wider">Catalog Setup</span>
-              <h3 className="font-semibold text-foreground mt-1">{editingProduct ? 'Polish this inventory record' : 'Add a new product with confidence'}</h3>
-              <p className="text-sm text-muted-foreground mt-1">Keep identity, stock alerts, and pricing structured so inventory stays clean, searchable, and premium.</p>
+              <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Catalog Setup</span>
+              <h3 className="font-semibold text-foreground mt-0.5 text-sm">{editingProduct ? 'Polish this inventory record' : 'Add a new product with confidence'}</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Keep identity, stock alerts, and pricing structured so inventory stays clean, searchable, and premium.</p>
             </div>
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-sm font-semibold border-b border-border pb-2 text-foreground">Product Identity</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider border-b border-border pb-1.5 text-muted-foreground font-sans">Product Identity</h4>
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">Product Name</label>
@@ -711,7 +726,7 @@ export const InventoryPage = () => {
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-sm font-semibold border-b border-border pb-2 text-foreground">Stock & Pricing</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider border-b border-border pb-1.5 text-muted-foreground font-sans">Stock & Pricing</h4>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-foreground">Initial Inventory</label>
@@ -755,8 +770,8 @@ export const InventoryPage = () => {
             </div>
           </div>
 
-          <div className="space-y-4 pt-4 border-t border-border">
-            <h4 className="text-sm font-semibold border-b border-border pb-2 text-foreground">Product Variations</h4>
+          <div className="space-y-4 pt-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider border-b border-border pb-1.5 text-muted-foreground font-sans">Product Variations</h4>
             
             <div className="p-4 rounded-xl bg-secondary/30 border border-border">
               <span className="text-[10px] font-black uppercase tracking-widest text-primary block mb-3">Bulk Variation Generator</span>
@@ -852,7 +867,10 @@ export const InventoryPage = () => {
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-border mt-6">
             <Button variant="ghost" type="button" onClick={() => setIsProductModalOpen(false)}>Cancel</Button>
-            <Button type="submit">{editingProduct ? 'Update Product' : 'Save Product'}</Button>
+            <Button type="submit" disabled={isSavingProduct} className="gap-2">
+              {isSavingProduct && <Loader2 size={16} className="animate-spin" />}
+              {isSavingProduct ? 'Saving...' : (editingProduct ? 'Update Product' : 'Save Product')}
+            </Button>
           </div>
         </form>
       </Modal>

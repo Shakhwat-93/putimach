@@ -7,12 +7,14 @@ export const Modal = ({ isOpen, onClose, title, subtitle, children, className = 
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose?.()}>
       <DialogContent onClose={onClose} className={className} size={size}>
         {(title || subtitle) && (
-          <DialogHeader>
+          <DialogHeader className="shrink-0">
             {title && <DialogTitle>{title}</DialogTitle>}
             {subtitle && <DialogDescription>{subtitle}</DialogDescription>}
           </DialogHeader>
         )}
-        {children}
+        <div className="flex-1 overflow-y-auto pr-1 space-y-4 scrollbar-thin">
+          {children}
+        </div>
       </DialogContent>
     </Dialog>
   );

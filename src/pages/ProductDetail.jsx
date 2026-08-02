@@ -32,7 +32,9 @@ export default function ProductDetail() {
   const [sizeError, setSizeError] = useState(false);
   const { addItem, openCart } = useCartStore();
 
-  const images = product ? (Array.isArray(product.images) && product.images.length > 0 ? product.images : [product.image]) : [];
+  const mainImage = product?.image || (Array.isArray(product?.images) && product.images[0]);
+  const otherImages = Array.isArray(product?.images) ? product.images.filter(img => img && img !== mainImage) : [];
+  const images = product ? [mainImage, ...otherImages].filter(Boolean) : [];
   const sliderRef = useRef(null);
   
   const handleScroll = (e) => {
@@ -145,8 +147,8 @@ export default function ProductDetail() {
   );
 
   const productReviews = reviews.filter((r) => r.productId === product.id || r.productId === product.slug);
-  const discount = originalPrice
-    ? Math.round((1 - product.price / originalPrice) * 100)
+  const discount = (originalPrice && Number(originalPrice) > Number(product.price))
+    ? Math.round(((Number(originalPrice) - Number(product.price)) / Number(originalPrice)) * 100)
     : null;
 
   const handleAddToCart = () => {
@@ -185,10 +187,11 @@ export default function ProductDetail() {
   const sizeGuide = product.size_guide;
   const isAdvanced = sizeGuide?.columns && sizeGuide?.rows;
   const materialText = product.material || sizeGuide?.material || "Cotton 100%";
+  const sizeChartImageUrl = sizeGuide?.image_url || sizeGuide?.chart_image || product.size_chart_image || null;
   const cols = isAdvanced ? sizeGuide.columns : ["Size", "Dimensions"];
   const rows = isAdvanced
     ? sizeGuide.rows
-    : Object.entries(sizeGuide || {}).filter(([k]) => k !== 'material').map(([sz, dim]) => ({ "Size": sz, "Dimensions": String(dim) }));
+    : Object.entries(sizeGuide || {}).filter(([k]) => k !== 'material' && k !== 'image_url' && k !== 'chart_image').map(([sz, dim]) => ({ "Size": sz, "Dimensions": String(dim) }));
 
   return (
     <div className="min-h-screen pt-20 pb-20">
@@ -690,6 +693,20 @@ export default function ProductDetail() {
                     <p className="text-sm font-bold text-surface-primary">{materialText}</p>
                   </div>
                 </div>
+
+                {/* Uploaded Size Chart Image / Diagram */}
+                {sizeChartImageUrl && (
+                  <div className="mb-6 rounded-2xl overflow-hidden border border-base-300 bg-base-950/80 p-3 text-center">
+                    <p className="text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-2">Visual Size Guide Diagram</p>
+                    <a href={sizeChartImageUrl} target="_blank" rel="noreferrer" className="block cursor-zoom-in">
+                      <img 
+                        src={sizeChartImageUrl} 
+                        alt="Size Chart Diagram" 
+                        className="w-full h-auto max-h-[380px] object-contain mx-auto rounded-xl shadow-md border border-base-300/50 hover:scale-[1.02] transition-transform duration-300"
+                      />
+                    </a>
+                  </div>
+                )}
 
                 {/* Table */}
                 {rows.length > 0 ? (
