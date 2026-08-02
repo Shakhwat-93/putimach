@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { SlidersHorizontal, Search, ChevronDown, Grid2X2, Grid3X3, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getProducts, getCategories } from '../lib/api';
 import ProductCard from '../components/shop/ProductCard';
+import { trackSearch } from '../lib/tracking';
 
 const sortOptions = [
   { val: 'featured', label: 'Featured' },
@@ -173,6 +174,16 @@ export default function Shop() {
     }
     loadData();
   }, []);
+
+  // Fire Search tracking event when user searches (debounced to avoid firing on every keystroke)
+  useEffect(() => {
+    if (!searchQuery) return;
+    const timer = setTimeout(() => {
+      trackSearch(searchQuery);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
 
   const updateParam = (key, val) => {
     const params = new URLSearchParams(searchParams);

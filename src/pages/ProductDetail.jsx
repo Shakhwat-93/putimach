@@ -9,6 +9,7 @@ import { getProductBySlug, getProducts } from '../lib/api';
 import { reviews } from '../data/products';
 import ProductCard from '../components/shop/ProductCard';
 import useCartStore from '../store/cartStore';
+import { trackViewContent, trackAddToCart } from '../lib/tracking';
 
 const formatPrice = (p) => `৳${Number(p).toLocaleString('en-BD')}`;
 
@@ -88,6 +89,11 @@ export default function ProductDetail() {
         setSelectedSize(prod?.sizes?.[0] || null);
         setSelectedColor(prod?.colors?.[0] || null);
 
+        // Fire ViewContent tracking event after product loads
+        if (prod) {
+          trackViewContent(prod);
+        }
+
         if (prod?.category) {
           const rel = await getProducts({ category: prod.category });
           setRelatedProducts(rel.filter((p) => p.id !== prod.id).slice(0, 4));
@@ -160,6 +166,8 @@ export default function ProductDetail() {
     }
     setAdding(true);
     addItem(product, selectedSize || 'One Size', selectedColor || 'None', 1);
+    // Fire AddToCart tracking event
+    trackAddToCart(product, 1, selectedSize || 'One Size');
     setTimeout(() => {
       setAdding(false);
       setAdded(true);

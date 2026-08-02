@@ -9,11 +9,12 @@ import { DateRangePicker } from '../components/DateRangePicker';
 import { useConfirmDialog } from '../hooks/useConfirmDialog';
 import { Input } from '../components/ui/input';
 import { cn } from '../lib/utils';
+import TrackingSection from '../components/TrackingSection';
 import {
   Settings as SettingsIcon, Trash2, AlertTriangle, CheckCircle, Loader2,
   ShieldAlert, Database, Truck, Zap, Key, Save, Type, Bell, Package,
   Clock, Shield, Sliders, Eye, EyeOff, ChevronRight, ChevronLeft, Activity,
-  ToggleLeft, ToggleRight, RefreshCw, Lock, Palette, Download
+  ToggleLeft, ToggleRight, RefreshCw, Lock, Palette, Download, BarChart2, Copy, ExternalLink, Wifi
 } from 'lucide-react';
 
 // ── Sidebar nav sections ──
@@ -25,6 +26,7 @@ const NAV = [
   { id: 'courier',     label: 'Courier',          icon: Truck,      desc: 'Steadfast integration' },
   { id: 'alerts',      label: 'Alert Timers',     icon: Bell,       desc: 'Response & notification timers' },
   { id: 'update',      label: 'App Updates',      icon: RefreshCw,  desc: 'OTA Updates & Version Center' },
+  { id: 'tracking',    label: 'Tracking & Pixels', icon: BarChart2, desc: 'GTM, GA4, Meta Pixel & CAPI' },
   { id: 'danger',      label: 'Danger Zone',      icon: AlertTriangle, desc: 'System reset', danger: true },
 ];
 
@@ -881,6 +883,9 @@ export const Settings = () => {
           </div>
         );
       }
+
+      // ── TRACKING ──
+      case 'tracking': return <TrackingSection supabase={supabase} />;
 
       default: return null;
     }

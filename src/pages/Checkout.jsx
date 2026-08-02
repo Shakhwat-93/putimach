@@ -1,5 +1,5 @@
 // src/pages/Checkout.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import useCartStore from '../store/cartStore';
 import { supabase } from '../lib/supabase';
+import { trackInitiateCheckout, trackPurchase } from '../lib/tracking';
 
 const formatPrice = (p) => `৳${Number(p).toLocaleString('en-BD')}`;
 
@@ -346,6 +347,16 @@ export default function Checkout() {
     loadRates();
   }, []);
 
+  // Fire InitiateCheckout when user arrives on checkout page (once, when items are ready)
+  const initiateCheckoutFired = useRef(false);
+  useEffect(() => {
+    if (items.length > 0 && !initiateCheckoutFired.current) {
+      initiateCheckoutFired.current = true;
+      trackInitiateCheckout(items, subtotal);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length]);
+
   const shipping = shippingArea === 'inside'
     ? shippingRates.inside
     : shippingArea === 'sub'
@@ -543,6 +554,21 @@ export default function Checkout() {
       setOrderNumber(num);
       clearCart();
       setOrderedItems(orderedItems);
+
+      // Fire Purchase tracking event
+      trackPurchase(
+        { ...orderPayload, ordered_items: orderedItems.map(i => ({
+            id: i.product.id,
+            name: i.product.name,
+            price: i.product.price,
+            quantity: i.quantity,
+            size: i.size,
+          })),
+          shipping_fee: shipping,
+        },
+        { phone: form.phone, email: form.email }
+      );
+
       setSuccess(true);
     } catch (err) {
       setError(err.message || 'Something went wrong. Please try again.');

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, createContext, useContext, useState } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from './components/layout/Navbar';
@@ -9,6 +9,17 @@ import ProductDetail from './pages/ProductDetail';
 import Checkout from './pages/Checkout';
 import TrackOrder from './pages/TrackOrder';
 import { ShippingInfo, ReturnsExchanges, ContactUs, OurStory, PrivacyPolicy, TermsOfService, CookiePolicy, FAQ } from './pages/InfoPages';
+import { supabase } from './lib/supabase';
+import {
+  loadTrackingConfig,
+  injectGTM,
+  injectMetaPixel,
+  trackPageView,
+} from './lib/tracking';
+
+/* ── Tracking Context ── */
+const TrackingCtx = createContext(null);
+export const useTracking = () => useContext(TrackingCtx);
 
 /* ── Scroll to top on every route change ── */
 function ScrollToTop() {
@@ -19,12 +30,76 @@ function ScrollToTop() {
   return null;
 }
 
+/* ── Page View tracker (fires on every route change) ── */
+function PageViewTracker() {
+  const { pathname } = useLocation();
+  const tracking = useTracking();
+
+  useEffect(() => {
+    if (tracking?.ready) {
+      trackPageView();
+    }
+  }, [pathname, tracking?.ready]);
+
+  return null;
+}
+
+/* ── Tracking Initializer (runs once on app mount) ── */
+function TrackingProvider({ children }) {
+  const [trackingState, setTrackingState] = useState({ ready: false });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function init() {
+      try {
+        const config = await loadTrackingConfig(supabase);
+
+        if (cancelled) return;
+
+        if (config?.gtm_id && config.tracking_enabled !== false) {
+          injectGTM(config.gtm_id);
+        }
+
+        if (config?.pixel_id && config.tracking_enabled !== false) {
+          // Only inject Pixel directly if GTM is NOT managing it
+          // If GTM is set, add Pixel via GTM tags instead
+          if (!config.gtm_id) {
+            injectMetaPixel(config.pixel_id);
+          } else {
+            // Still initialize fbq stub so our manual firePixel calls work
+            // when GTM loads the pixel asynchronously
+            window.fbq = window.fbq || function() {
+              (window.fbq.q = window.fbq.q || []).push(arguments);
+            };
+          }
+        }
+
+        setTrackingState({ ready: true });
+      } catch (e) {
+        console.warn('[Tracking] Init failed:', e);
+        setTrackingState({ ready: false });
+      }
+    }
+
+    init();
+    return () => { cancelled = true; };
+  }, []);
+
+  return (
+    <TrackingCtx.Provider value={trackingState}>
+      {children}
+    </TrackingCtx.Provider>
+  );
+}
+
 /* Frontend layout */
 function FrontendLayout() {
   const location = useLocation();
   return (
     <div className="flex flex-col min-h-screen">
       <ScrollToTop />
+      <PageViewTracker />
       <Navbar />
       <main className="flex-1">
         <AnimatePresence mode="wait">
@@ -103,13 +178,15 @@ function AdminRedirect() {
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Admin redirection routes */}
-        <Route path="/admin" element={<AdminRedirect />} />
-        <Route path="/admin/*" element={<AdminRedirect />} />
-        {/* Frontend routes */}
-        <Route path="/*" element={<FrontendLayout />} />
-      </Routes>
+      <TrackingProvider>
+        <Routes>
+          {/* Admin redirection routes */}
+          <Route path="/admin" element={<AdminRedirect />} />
+          <Route path="/admin/*" element={<AdminRedirect />} />
+          {/* Frontend routes */}
+          <Route path="/*" element={<FrontendLayout />} />
+        </Routes>
+      </TrackingProvider>
     </BrowserRouter>
   );
 }
