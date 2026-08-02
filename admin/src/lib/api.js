@@ -2878,45 +2878,117 @@ export const api = {
    * Dispatch an order to the integrated courier (Steadfast)
    */
   async dispatchToCourier(orderId) {
-    const response = await fetch('/admin-api/courier-dispatch', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ orderId })
-    });
-    const data = await response.json();
-    if (!response.ok || !data.success) {
-      const errorMsg = data.error || 'Courier Dispatch failed';
-      console.error('Courier Dispatch Error:', errorMsg);
-      throw new Error(errorMsg);
+    // 1. Try server proxy endpoint first
+    try {
+      const response = await fetch('/admin-api/courier-dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.success) {
+          const consignmentId = data?.consignmentId || data?.details?.consignment?.consignment_id || data?.details?.id;
+          const trackingCode = data?.trackingCode || data?.details?.consignment?.tracking_code || data?.details?.tracking_code;
+          const courierStatus = data?.details?.consignment?.status || data?.details?.status || 'pending';
+
+          await supabase.from('orders').update({
+            dispatched_at: new Date().toISOString(),
+            courier_name: 'Steadfast',
+            tracking_id: trackingCode || null,
+            courier_assigned_id: consignmentId ? String(consignmentId) : null,
+            courier_status: courierStatus,
+            status: 'Courier Submitted'
+          }).eq('id', orderId);
+
+          return data;
+        }
+      }
+    } catch (proxyErr) {
+      console.warn('[Courier Dispatch] Express proxy endpoint unavailable, using direct dispatch fallback:', proxyErr.message);
     }
 
-    // Capture metadata on success
-    // The Edge Function returns { success, trackingCode, consignmentId, details }
-    const consignmentId = data?.consignmentId || data?.details?.consignment?.consignment_id || data?.details?.id;
-    const trackingCode = data?.trackingCode || data?.details?.consignment?.tracking_code || data?.details?.tracking_code;
-    const courierStatus = data?.details?.consignment?.status || data?.details?.status || 'pending';
-    
-    // The Edge Function already updates the database, but we perform a 
-    // client-side sync update here to be absolutely sure and handle any race conditions.
-    const { error: updateError } = await supabase
+    // 2. Direct Browser Fallback for Steadfast Dispatch
+    const config = await this.getSystemConfig('courier_steadfast');
+    if (!config || config.is_enabled === false) {
+      throw new Error('Steadfast integration is disabled or not configured in Settings → Courier.');
+    }
+    if (!config.api_key || !config.secret_key) {
+      throw new Error('Steadfast API Key or Secret Key is missing in Settings.');
+    }
+
+    // Fetch order details
+    const { data: order, error: orderErr } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .single();
+
+    if (orderErr || !order) {
+      throw new Error(`Order not found: ${orderErr?.message || orderId}`);
+    }
+
+    const payload = {
+      invoice: String(order.id),
+      recipient_name: order.customer_name || 'Customer',
+      recipient_phone: order.phone,
+      recipient_address: order.address || 'Dhaka, Bangladesh',
+      cod_amount: parseFloat(String(order.amount || 0)),
+      note: `${order.product_name || ''} ${order.size ? `(Size: ${order.size})` : ''}`.trim().slice(0, 250) || 'Standard Delivery'
+    };
+
+    let sfRes;
+    try {
+      sfRes = await fetch('https://portal.packzy.com/api/v1/create_order', {
+        method: 'POST',
+        headers: {
+          'Api-Key': config.api_key,
+          'Secret-Key': config.secret_key,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      sfRes = await fetch('https://portal.steadfast.com.bd/api/v1/create_order', {
+        method: 'POST',
+        headers: {
+          'Api-Key': config.api_key,
+          'Secret-Key': config.secret_key,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+    }
+
+    const sfData = await sfRes.json();
+    if (!sfRes.ok || (sfData.status && sfData.status !== 200)) {
+      const msg = sfData.message || sfData.errors?.invoice?.[0] || sfData.errors?.recipient_phone?.[0] || 'Steadfast API submission failed';
+      throw new Error(`Steadfast Error: ${msg}`);
+    }
+
+    const consignment = sfData.consignment || sfData;
+    const trackingCode = consignment.tracking_code || null;
+    const consignmentId = consignment.consignment_id || consignment.id || null;
+    const courierStatus = consignment.status || 'pending';
+
+    await supabase
       .from('orders')
       .update({
         dispatched_at: new Date().toISOString(),
         courier_name: 'Steadfast',
-        tracking_id: trackingCode || null,
+        tracking_id: trackingCode,
         courier_assigned_id: consignmentId ? String(consignmentId) : null,
         courier_status: courierStatus,
         status: 'Courier Submitted'
       })
       .eq('id', orderId);
 
-    if (updateError) {
-      console.error('Failed to update dispatch metadata:', updateError);
-    }
-
-    return data;
+    return {
+      success: true,
+      trackingCode,
+      consignmentId,
+      details: sfData
+    };
   },
 
   /**
@@ -3082,37 +3154,19 @@ export const api = {
    * Get system configurations (e.g., courier settings)
    */
   async getSystemConfig(key) {
-    // 1. Try site_settings (id, data)
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('site_settings')
         .select('data')
         .eq('id', key)
         .maybeSingle();
 
-      if (data && data.data) {
+      if (!error && data && data.data !== undefined) {
         return data.data;
       }
     } catch (e) {
-      console.warn('[getSystemConfig] site_settings fetch failed:', e.message);
+      console.warn('[getSystemConfig] site_settings query failed:', e.message);
     }
-
-    // 2. Fallback to system_configs (key, value)
-    try {
-      const { data, error } = await supabase
-        .from('system_configs')
-        .select('value')
-        .eq('key', key)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') console.warn(error);
-      if (data && data.value) {
-        return data.value;
-      }
-    } catch (e) {
-      console.warn('[getSystemConfig] system_configs fetch failed:', e.message);
-    }
-
     return null;
   },
 
@@ -3120,7 +3174,6 @@ export const api = {
    * Update system configurations
    */
   async updateSystemConfig(key, value) {
-    // 1. Try site_settings (id, data)
     try {
       const { data, error } = await supabase
         .from('site_settings')
@@ -3128,24 +3181,10 @@ export const api = {
         .select()
         .maybeSingle();
 
-      if (!error && data) return data;
+      if (!error && data) return data.data;
     } catch (e) {
       console.warn('[updateSystemConfig] site_settings upsert failed:', e.message);
     }
-
-    // 2. Fallback to system_configs (key, value)
-    try {
-      const { data, error } = await supabase
-        .from('system_configs')
-        .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
-        .select()
-        .single();
-
-      if (!error) return data;
-    } catch (e) {
-      console.warn('[updateSystemConfig] system_configs upsert failed:', e.message);
-    }
-
     return null;
   },
 

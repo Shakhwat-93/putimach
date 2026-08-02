@@ -68,25 +68,7 @@ export const supabase = new Proxy({}, {
           return supabaseOthers.from('cb_categories');
         }
         if (tableName === 'site_settings' || tableName === 'system_configs') {
-          const builder = supabaseOthers.from('cb_settings');
-          return new Proxy(builder, {
-            get(bTarget, bProp) {
-              if (bProp === 'select') {
-                return (columns = '*') => {
-                  const cols = (columns === 'value') ? 'data as value, id as key, data' : columns;
-                  return bTarget.select(cols);
-                };
-              }
-              if (bProp === 'eq') {
-                return (column, val) => {
-                  const col = (column === 'key') ? 'id' : column;
-                  return bTarget.eq(col, val);
-                };
-              }
-              const val = bTarget[bProp];
-              return typeof val === 'function' ? val.bind(bTarget) : val;
-            }
-          });
+          return supabaseOthers.from('cb_settings');
         }
 
         // Route order-specific tables to orders DB
