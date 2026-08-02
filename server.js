@@ -59,15 +59,54 @@ const getOrderById = async (orderId) => {
 };
 
 const getSystemConfig = async (key) => {
-  // system_configs lives in the catalog DB (supabaseOthers), not the orders DB
-  const { data, error } = await supabaseOthers
-    .from('system_configs')
-    .select('*')
-    .eq('key', key)
-    .single();
-  if (error) throw error;
-  return data?.value || null;
+  // 1. Try cb_settings (id, data) in catalog DB
+  try {
+    const { data } = await supabaseOthers
+      .from('cb_settings')
+      .select('data')
+      .eq('id', key)
+      .maybeSingle();
+
+    if (data && data.data) {
+      return data.data;
+    }
+  } catch (e) {
+    console.warn('[getSystemConfig] cb_settings query failed:', e.message);
+  }
+
+  // 2. Try site_settings (id, data)
+  try {
+    const { data } = await supabaseOthers
+      .from('site_settings')
+      .select('data')
+      .eq('id', key)
+      .maybeSingle();
+
+    if (data && data.data) {
+      return data.data;
+    }
+  } catch (e) {
+    console.warn('[getSystemConfig] site_settings query failed:', e.message);
+  }
+
+  // 3. Fallback to legacy system_configs (key, value)
+  try {
+    const { data } = await supabaseOthers
+      .from('system_configs')
+      .select('value')
+      .eq('key', key)
+      .maybeSingle();
+
+    if (data && data.value) {
+      return data.value;
+    }
+  } catch (e) {
+    console.warn('[getSystemConfig] system_configs query failed:', e.message);
+  }
+
+  return null;
 };
+
 
 const updateOrderCourierDetails = async (orderId, updates) => {
   const { error } = await supabaseOrders

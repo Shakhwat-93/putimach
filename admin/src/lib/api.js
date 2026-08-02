@@ -2923,13 +2923,8 @@ export const api = {
    * Dispatch an order to Pathao Courier
    */
   async dispatchToPathao(orderId) {
-    const { data: configData } = await supabase
-      .from('system_configs')
-      .select('value')
-      .eq('key', 'courier_pathao')
-      .maybeSingle();
+    const config = await this.getSystemConfig('courier_pathao');
 
-    const config = configData?.value;
     if (!config || !config.is_enabled || !config.client_id || !config.client_secret || !config.username || !config.password) {
       throw new Error('Pathao Courier integration is disabled or credentials are not configured in Settings.');
     }
@@ -3087,28 +3082,71 @@ export const api = {
    * Get system configurations (e.g., courier settings)
    */
   async getSystemConfig(key) {
+    // 1. Try site_settings (id, data)
+    try {
+      const { data } = await supabase
+        .from('site_settings')
+        .select('data')
+        .eq('id', key)
+        .maybeSingle();
+
+      if (data && data.data) {
+        return data.data;
+      }
+    } catch (e) {
+      console.warn('[getSystemConfig] site_settings fetch failed:', e.message);
+    }
+
+    // 2. Fallback to system_configs (key, value)
+    try {
       const { data, error } = await supabase
         .from('system_configs')
         .select('value')
         .eq('key', key)
         .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error;
-      return data?.value || null;
-    },
+      if (error && error.code !== 'PGRST116') console.warn(error);
+      if (data && data.value) {
+        return data.value;
+      }
+    } catch (e) {
+      console.warn('[getSystemConfig] system_configs fetch failed:', e.message);
+    }
+
+    return null;
+  },
 
   /**
    * Update system configurations
    */
   async updateSystemConfig(key, value) {
-    const { data, error } = await supabase
-      .from('system_configs')
-      .upsert({ key, value, updated_at: new Date().toISOString() })
-      .select()
-      .single();
+    // 1. Try site_settings (id, data)
+    try {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .upsert({ id: key, data: value, updated_at: new Date().toISOString() }, { onConflict: 'id' })
+        .select()
+        .maybeSingle();
 
-    if (error) throw error;
-    return data;
+      if (!error && data) return data;
+    } catch (e) {
+      console.warn('[updateSystemConfig] site_settings upsert failed:', e.message);
+    }
+
+    // 2. Fallback to system_configs (key, value)
+    try {
+      const { data, error } = await supabase
+        .from('system_configs')
+        .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+        .select()
+        .single();
+
+      if (!error) return data;
+    } catch (e) {
+      console.warn('[updateSystemConfig] system_configs upsert failed:', e.message);
+    }
+
+    return null;
   },
 
   // ──────────────────────────────────────────────

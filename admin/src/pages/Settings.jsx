@@ -291,20 +291,20 @@ export const Settings = () => {
       setPathaoLoading(true);
       setFraudCheckerLoading(true);
       try {
-        const { data } = await supabase.from('system_configs').select('value').eq('key', 'courier_steadfast').maybeSingle();
-        if (data?.value) setCourierConfig(data.value);
+        const data = await api.getSystemConfig('courier_steadfast');
+        if (data) setCourierConfig(data);
       } catch (e) { console.warn(e); }
       finally { setCourierLoading(false); }
 
       try {
-        const { data } = await supabase.from('system_configs').select('value').eq('key', 'courier_pathao').maybeSingle();
-        if (data?.value) setPathaoConfig(data.value);
+        const data = await api.getSystemConfig('courier_pathao');
+        if (data) setPathaoConfig(data);
       } catch (e) { console.warn(e); }
       finally { setPathaoLoading(false); }
 
       try {
-        const { data } = await supabase.from('system_configs').select('value').eq('key', 'fraud_checker_bd').maybeSingle();
-        if (data?.value) setFraudCheckerConfig(data.value);
+        const data = await api.getSystemConfig('fraud_checker_bd');
+        if (data) setFraudCheckerConfig(data);
       } catch (e) { console.warn(e); }
       finally { setFraudCheckerLoading(false); }
     })();
@@ -344,7 +344,7 @@ export const Settings = () => {
   const saveCourier = async () => {
     setCourierSaving(true);
     try {
-      await supabase.from('system_configs').upsert({ key: 'courier_steadfast', value: courierConfig }, { onConflict: 'key' });
+      await api.updateSystemConfig('courier_steadfast', courierConfig);
       setCourierSaved(true); setTimeout(() => setCourierSaved(false), 3000);
     } catch { setError('Courier save failed.'); } finally { setCourierSaving(false); }
   };
@@ -352,7 +352,7 @@ export const Settings = () => {
   const savePathao = async () => {
     setPathaoSaving(true);
     try {
-      await supabase.from('system_configs').upsert({ key: 'courier_pathao', value: pathaoConfig }, { onConflict: 'key' });
+      await api.updateSystemConfig('courier_pathao', pathaoConfig);
       setPathaoSaved(true); setTimeout(() => setPathaoSaved(false), 3000);
     } catch { setError('Pathao save failed.'); } finally { setPathaoSaving(false); }
   };
@@ -360,7 +360,7 @@ export const Settings = () => {
   const saveFraudChecker = async () => {
     setFraudCheckerSaving(true);
     try {
-      await supabase.from('system_configs').upsert({ key: 'fraud_checker_bd', value: fraudCheckerConfig }, { onConflict: 'key' });
+      await api.updateSystemConfig('fraud_checker_bd', fraudCheckerConfig);
       setFraudCheckerSaved(true); setTimeout(() => setFraudCheckerSaved(false), 3000);
     } catch { setError('Fraud Checker BD save failed.'); } finally { setFraudCheckerSaving(false); }
   };
