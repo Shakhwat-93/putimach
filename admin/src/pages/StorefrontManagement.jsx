@@ -135,32 +135,8 @@ const MultipleImageUploadInput = ({ label, value = [], onChange }) => {
     try {
       const uploadedUrls = [];
       for (let i = 0; i < files.length; i++) {
-        let file = files[i];
-        
-        // Auto convert to WebP client-side
-        file = await convertToWebP(file);
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const res = await fetch('/admin-api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        const text = await res.text();
-        let resData = {};
-        try {
-          resData = text ? JSON.parse(text) : {};
-        } catch (e) {
-          throw new Error(`Upload server error (${res.status}). Ensure backend server (server.js) is running.`);
-        }
-
-        if (!res.ok || !resData.url) {
-          throw new Error(resData.error || resData.message || `Upload failed (${res.status})`);
-        }
-
-        uploadedUrls.push(resData.url);
+        const url = await uploadImage(files[i]);
+        if (url) uploadedUrls.push(url);
       }
 
       onChange([...value, ...uploadedUrls]);

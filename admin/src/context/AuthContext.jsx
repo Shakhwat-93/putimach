@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import api from '../lib/api';
-import { convertToWebP } from '../utils/image';
+import { uploadImage } from '../lib/uploadHelper';
 
 const AuthContext = createContext({});
 
@@ -325,33 +325,9 @@ export const AuthProvider = ({ children }) => {
 
   const uploadAvatar = async (file) => {
     if (!user) return;
-
-    // Convert avatar file to WebP client-side
-    const webpFile = await convertToWebP(file);
-
-    const formData = new FormData();
-    formData.append('file', webpFile);
-
-    const res = await fetch('/admin-api/upload', {
-      method: 'POST',
-      body: formData,
-    });
-
-    const text = await res.text();
-    let resData = {};
-    try {
-      resData = text ? JSON.parse(text) : {};
-    } catch (e) {
-      throw new Error(`Upload server error (${res.status}). Ensure backend server is running.`);
-    }
-
-    if (!res.ok || !resData.url) {
-      throw new Error(resData.error || resData.message || `Upload failed (${res.status})`);
-    }
-
-    const publicUrl = resData.url;
-
-    await updateProfile(user.id, { avatar_url: publicUrl });
+    const url = await uploadImage(file);
+    if (!url) throw new Error('Failed to process avatar upload');
+    await updateProfile(user.id, { avatar_url: url });
 
     const currentName = profile?.name || user?.user_metadata?.full_name || user?.email || 'User';
     await api.logActivity({
