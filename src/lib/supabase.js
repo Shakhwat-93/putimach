@@ -34,42 +34,25 @@ export const supabase = new Proxy({}, {
   get(target, prop) {
     if (prop === 'from') {
       return (tableName) => {
-        if (tableName === 'products') {
+        // 1. Catalog DB tables (supabaseOthers: nmomvkssloqnhogndlwg)
+        if (tableName === 'products' || tableName === 'cb_products') {
           return supabaseOthers.from('cb_products');
         }
-        if (tableName === 'categories') {
+        if (tableName === 'categories' || tableName === 'cb_categories') {
           return supabaseOthers.from('cb_categories');
         }
-        if (tableName === 'site_settings' || tableName === 'system_configs') {
-          const builder = supabaseOthers.from('cb_settings');
-          return new Proxy(builder, {
-            get(bTarget, bProp) {
-              if (bProp === 'select') {
-                return (columns = '*') => {
-                  const cols = (columns === 'value') ? 'data as value, id as key, data' : columns;
-                  return bTarget.select(cols);
-                };
-              }
-              if (bProp === 'eq') {
-                return (column, val) => {
-                  const col = (column === 'key') ? 'id' : column;
-                  return bTarget.eq(col, val);
-                };
-              }
-              const val = bTarget[bProp];
-              return typeof val === 'function' ? val.bind(bTarget) : val;
-            }
-          });
+        if (tableName === 'site_settings' || tableName === 'system_configs' || tableName === 'cb_settings') {
+          return supabaseOthers.from('cb_settings');
         }
-        if (['orders', 'order_activity_logs', 'courier_ratio_cache', 'blocked_ip_addresses', 'retained_cancelled_ips'].includes(tableName)) {
-          return supabaseOrders.from(tableName);
-        }
-        return supabaseOthers.from(tableName);
+
+        // 2. All operational tables (orders, users, inventory, toy_box_inventory, etc.)
+        // live in the ORDERS database (supabaseOrders: tvoxogfqxxilvudtdfdj)
+        return supabaseOrders.from(tableName);
       };
     }
-    const value = supabaseOthers[prop];
+    const value = supabaseOrders[prop] || supabaseOthers[prop];
     if (typeof value === 'function') {
-      return value.bind(supabaseOthers);
+      return value.bind(supabaseOrders);
     }
     return value;
   }
