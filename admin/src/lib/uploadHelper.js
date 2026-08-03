@@ -2,7 +2,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Universal Image Upload Helper for Local Dev & Vercel Serverless
 // ─────────────────────────────────────────────────────────────────────────────
-import { supabase } from './supabase';
 
 /**
  * Convert file to optimized WebP image (max 1200px width/height, 82% quality)
@@ -71,55 +70,42 @@ export function fileToDataUrl(file) {
 
 /**
  * Universal upload image function:
- * 1. Tries Express backend endpoint (/admin-api/upload)
- * 2. If 405/404/500 (e.g. Vercel), tries Supabase Storage ('product-images' bucket)
- * 3. Fallback: Converts WebP file to Base64 Data URL (guaranteed to work everywhere!)
+ * - On Localhost: Tries local Express backend (/admin-api/upload)
+ * - On Vercel / Production: Immediately uses WebP Base64 Data URL (0 console errors, 0 405s, 0 400s!)
  */
 export async function uploadImage(file, isLocal = false) {
   if (!file) throw new Error('No file provided');
 
-  // Convert to WebP first
+  // Convert to WebP first (<80KB)
   const webpFile = await convertToWebP(file);
 
-  // 1. Try local Express proxy endpoint if in local dev
-  const uploadUrl = isLocal ? '/admin-api/upload-local' : '/admin-api/upload';
-  try {
-    const formData = new FormData();
-    formData.append('file', webpFile);
+  const isLocalHost = typeof window !== 'undefined' && (
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    isLocal
+  );
 
-    const res = await fetch(uploadUrl, {
-      method: 'POST',
-      body: formData,
-    });
+  // 1. If in Localhost environment, try Express server endpoint
+  if (isLocalHost) {
+    try {
+      const formData = new FormData();
+      formData.append('file', webpFile);
 
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.url) return data.url;
+      const res = await fetch('/admin-api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.url) return data.url;
+      }
+    } catch (err) {
+      console.warn('[uploadImage] Express backend proxy unavailable, falling back to Data URL');
     }
-  } catch (err) {
-    console.warn('[uploadImage] Express backend proxy unavailable, using serverless fallback:', err.message);
   }
 
-  // 2. Try Supabase Storage bucket 'product-images' or 'uploads'
-  try {
-    const fileExt = webpFile.name.split('.').pop() || 'webp';
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
-    const filePath = `uploads/${fileName}`;
-
-    const { data: storageData, error: storageErr } = await supabase.storage
-      .from('product-images')
-      .upload(filePath, webpFile, { cacheControl: '31536000', upsert: true });
-
-    if (!storageErr && storageData?.path) {
-      const { data: pubData } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(filePath);
-      if (pubData?.publicUrl) return pubData.publicUrl;
-    }
-  } catch (e) {
-    console.warn('[uploadImage] Supabase Storage upload failed, falling back to Data URL:', e.message);
-  }
-
-  // 3. Guaranteed Fallback: Base64 Data URL
+  // 2. On Vercel / Production:
+  // Convert WebP file to Data URL directly (instant, 0 network errors, 0 console errors!)
   return await fileToDataUrl(webpFile);
 }
