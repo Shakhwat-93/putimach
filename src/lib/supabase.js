@@ -32,6 +32,12 @@ const supabaseOrders = ordersUrl && ordersAnonKey ? createClient(ordersUrl, orde
 // Transparent routing proxy to support multi-database split
 export const supabase = new Proxy({}, {
   get(target, prop) {
+    if (prop === 'auth') {
+      return supabaseOthers.auth;
+    }
+    if (prop === 'storage') {
+      return supabaseOthers.storage;
+    }
     if (prop === 'from') {
       return (tableName) => {
         // 1. Catalog DB tables (supabaseOthers: nmomvkssloqnhogndlwg)
@@ -50,9 +56,9 @@ export const supabase = new Proxy({}, {
         return supabaseOrders.from(tableName);
       };
     }
-    const value = supabaseOrders[prop] || supabaseOthers[prop];
+    const value = supabaseOthers[prop] || supabaseOrders[prop];
     if (typeof value === 'function') {
-      return value.bind(supabaseOrders);
+      return value.bind(supabaseOthers);
     }
     return value;
   }
