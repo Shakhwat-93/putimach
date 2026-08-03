@@ -30,29 +30,16 @@ const supabaseOthers = createClient(supabaseUrl, supabaseAnonKey, {
 
 const supabaseOrders = ordersUrl && ordersAnonKey ? createClient(ordersUrl, ordersAnonKey) : supabaseOthers;
 
-// Tables that live in the ORDERS database (tvoxogfqxxilvudtdfdj)
+// Tables that live in the ORDERS database
 const ORDERS_DB_TABLES = new Set([
   'orders',
+  'order_items',
+  'order_logs',
   'order_activity_logs',
   'courier_ratio_cache',
   'blocked_ip_addresses',
   'retained_cancelled_ips',
-  'users',
-  'user_roles',
-  'inventory',
-  'toy_box_inventory',
-  'daily_tasks',
-  'task_completions',
-  'assigned_tasks',
-  'task_activity_logs',
-  'notifications',
-  'ads_campaigns',
-  'content_plans',
-  'content_activity_logs',
-  'finance_planning',
-  'factory_logs',
-  'backup_settings',
-  'backup_logs',
+  'spam_filters',
 ]);
 
 // Transparent routing proxy to support multi-database split
@@ -76,7 +63,7 @@ export const supabase = new Proxy({}, {
           return supabaseOrders.from(tableName);
         }
 
-        // All other tables live in the catalog DB (supabaseOthers)
+        // All other tables (users, user_roles, inventory, toy_box_inventory, etc.) live in the catalog DB (supabaseOthers)
         return supabaseOthers.from(tableName);
       };
     }

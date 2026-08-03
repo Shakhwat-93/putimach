@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, 
@@ -424,7 +424,7 @@ export const DashboardOverview = () => {
               <CardTitle className="text-lg font-bold">Daily Orders Trend</CardTitle>
             </CardHeader>
             <CardContent className="pt-6 h-[350px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
                 <LineChart data={stats.orderTrend} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12}} dy={10} />
@@ -445,7 +445,7 @@ export const DashboardOverview = () => {
               </CardHeader>
               <CardContent className="pt-6 flex flex-col items-center justify-center">
                 <div className="h-[240px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
                     <PieChart>
                       <Pie
                         data={[{value: 100}]}
@@ -495,7 +495,7 @@ export const DashboardOverview = () => {
                 <CardTitle className="text-lg font-bold">Confirmation Rate (%)</CardTitle>
               </CardHeader>
               <CardContent className="pt-6 h-[280px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
                   <BarChart data={stats.confirmationData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12}} dy={10} />
                     <YAxis axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12}} />

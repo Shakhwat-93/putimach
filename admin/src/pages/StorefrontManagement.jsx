@@ -39,41 +39,23 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 import { Switch } from '../components/ui/switch';
 
 // Reusable Image Upload Input Component connected to Supabase Storage
+import { uploadImage } from '../lib/uploadHelper';
+
 const ImageUploadInput = ({ label, value, onChange, placeholder, required = false, local = false }) => {
   const [uploading, setUploading] = useState(false);
 
   const handleUpload = async (e) => {
-    let file = e.target.files?.[0];
+    const file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
     try {
-      // Auto convert to WebP client-side
-      file = await convertToWebP(file);
-
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const uploadUrl = local ? '/admin-api/upload-local' : '/admin-api/upload';
-
-      const res = await fetch(uploadUrl, {
-        method: 'POST',
-        body: formData,
-      });
-
-      const text = await res.text();
-      let resData = {};
-      try {
-        resData = text ? JSON.parse(text) : {};
-      } catch (e) {
-        throw new Error(`Upload server error (${res.status}). Ensure backend server (server.js) is running.`);
+      const url = await uploadImage(file, local);
+      if (url) {
+        onChange(url);
+      } else {
+        throw new Error('Could not process image URL');
       }
-
-      if (!res.ok || !resData.url) {
-        throw new Error(resData.error || resData.message || `Upload failed (${res.status})`);
-      }
-
-      onChange(resData.url);
     } catch (err) {
       console.error('Upload error:', err);
       alert('Failed to upload image: ' + err.message);

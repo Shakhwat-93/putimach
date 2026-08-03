@@ -803,7 +803,7 @@ export const ReportsPanel = () => {
               <h3 className="font-semibold">Source Acquisition</h3>
             </div>
             <div className="h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
                 <PieChart>
                   <Pie data={sourceData} cx="50%" cy="50%" innerRadius={65} outerRadius={85} paddingAngle={8} dataKey="value">
                     {sourceData.map((entry, index) => (
@@ -831,7 +831,7 @@ export const ReportsPanel = () => {
               <h3 className="font-semibold">Confirmation Logic</h3>
             </div>
             <div className="h-[200px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
                 <BarChart data={confirmationData} margin={{top: 10, right: 10, left: -25, bottom: 0}}>
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'var(--text-muted-foreground)', fontSize: 10}} dy={10} />
                   <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(255,255,255,0.05)'}} />
@@ -931,7 +931,7 @@ export const ReportsPanel = () => {
             </div>
 
             <div className="h-[280px] w-full mb-6">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
                 <BarChart data={adsData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(13, 148, 136,0.06)" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted-foreground)', fontSize: 11 }} dy={10} />

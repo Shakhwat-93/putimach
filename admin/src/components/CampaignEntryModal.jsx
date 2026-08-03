@@ -7,7 +7,7 @@ import {
   TrendingUp, TrendingDown, BarChart2, Package
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { convertToWebP } from '../utils/image';
+import { uploadImage } from '../lib/uploadHelper';
 import { useOrders } from '../context/OrderContext';
 import './CampaignEntryModal.css';
 
@@ -163,31 +163,10 @@ export const CampaignEntryModal = ({ isOpen, onClose, onSave, initialData = null
     for (const img of images) {
       if (img.url) { urls.push(img.url); continue; }
       try {
-        const webpFile = await convertToWebP(img.file);
-        
-        const formData = new FormData();
-        formData.append('file', webpFile);
-
-        const res = await fetch('/admin-api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        const text = await res.text();
-        let resData = {};
-        try {
-          resData = text ? JSON.parse(text) : {};
-        } catch (e) {
-          throw new Error(`Upload server error (${res.status}). Ensure backend server is running.`);
-        }
-
-        if (!res.ok || !resData.url) {
-          throw new Error(resData.error || resData.message || `Upload failed (${res.status})`);
-        }
-
-        urls.push(resData.url);
+        const url = await uploadImage(img.file);
+        if (url) urls.push(url);
       } catch (err) {
-        console.warn('WebP conversion or upload failed:', err.message);
+        console.warn('Upload failed:', err.message);
       }
     }
     return urls;
