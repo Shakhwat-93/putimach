@@ -24,6 +24,7 @@ import api from '../lib/api';
 import { getProductCheckpoints } from '../utils/productCatalog';
 import { useRouteOrderReadState } from '../hooks/useRouteOrderReadState';
 import { ExportModal } from '../components/ExportModal';
+import { PrintStudioModal } from '../components/PrintStudioModal';
 
 const ORDER_STATUSES = [
   'New',
@@ -206,6 +207,18 @@ export const OrdersBoard = () => {
   const [selectedOrderForEdit, setSelectedOrderForEdit] = useState(null);
   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isPrintStudioOpen, setIsPrintStudioOpen] = useState(false);
+  const [printStudioOrders, setPrintStudioOrders] = useState([]);
+
+  const handleOpenPrintStudio = (singleOrder = null) => {
+    if (singleOrder) {
+      setPrintStudioOrders([singleOrder]);
+    } else {
+      const selected = (orders || []).filter(o => selectedOrderIds.includes(o.id));
+      setPrintStudioOrders(selected);
+    }
+    setIsPrintStudioOpen(true);
+  };
 
   // Deep Link Observer: Handle direct order modal triggers
   useEffect(() => {
@@ -891,6 +904,7 @@ export const OrdersBoard = () => {
                   onDetails={handleRowClick}
                   onStatusChange={updateOrderStatus}
                   onEdit={handleOpenEditModal}
+                  onPrint={handleOpenPrintStudio}
                   isSelected={selectedOrderIds.includes(order.id)}
                   onSelect={handleSelectOrder}
                   fraudFlag={fraudFlags[order.id]}
@@ -1068,15 +1082,30 @@ export const OrdersBoard = () => {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-card/80 backdrop-blur-md border border-border shadow-lg px-6 py-3 rounded-full"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-slate-900/90 backdrop-blur-md border border-slate-700 text-white shadow-2xl px-6 py-3 rounded-full"
           >
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+            <div className="flex items-center gap-2 mr-2">
+              <span className="w-6 h-6 rounded-full bg-teal-500 text-slate-950 flex items-center justify-center text-xs font-black">
                 {selectedOrderIds.length}
               </span>
-              <span className="text-sm font-medium text-foreground">Selected</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Selected</span>
             </div>
-            <button className="p-1 rounded-full hover:bg-secondary text-muted-foreground" onClick={handleClearSelection}>
+
+            <button 
+              className="bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-full flex items-center gap-1.5 shadow-lg transition-all transform hover:scale-105"
+              onClick={() => handleOpenPrintStudio()}
+            >
+              <Printer size={15} /> Print Invoices & Labels ({selectedOrderIds.length})
+            </button>
+
+            <button 
+              className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs px-3.5 py-2 rounded-full flex items-center gap-1.5 border border-slate-700 transition-all"
+              onClick={() => setIsExportModalOpen(true)}
+            >
+              <Download size={14} /> Export Data
+            </button>
+
+            <button className="p-1.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white ml-1 transition-colors" onClick={handleClearSelection} title="Clear Selection">
               <X size={16} />
             </button>
           </motion.div>
@@ -1114,6 +1143,13 @@ export const OrdersBoard = () => {
         allOrders={filteredOrders}
         selectedOrderIds={selectedOrderIds}
         currentFilters={filters}
+      />
+
+      {/* Enterprise Print Studio Modal */}
+      <PrintStudioModal
+        isOpen={isPrintStudioOpen}
+        onClose={() => setIsPrintStudioOpen(false)}
+        orders={printStudioOrders}
       />
 
       {ConfirmDialogComponent}

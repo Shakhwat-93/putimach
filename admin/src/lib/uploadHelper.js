@@ -70,42 +70,14 @@ export function fileToDataUrl(file) {
 
 /**
  * Universal upload image function:
- * - On Localhost: Tries local Express backend (/admin-api/upload)
- * - On Vercel / Production: Immediately uses WebP Base64 Data URL (0 console errors, 0 405s, 0 400s!)
+ * Converts file to optimized WebP Data URL (instant, portable across Localhost, Vercel & Mobile!)
  */
-export async function uploadImage(file, isLocal = false) {
+export async function uploadImage(file) {
   if (!file) throw new Error('No file provided');
 
   // Convert to WebP first (<80KB)
   const webpFile = await convertToWebP(file);
 
-  const isLocalHost = typeof window !== 'undefined' && (
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1' ||
-    isLocal
-  );
-
-  // 1. If in Localhost environment, try Express server endpoint
-  if (isLocalHost) {
-    try {
-      const formData = new FormData();
-      formData.append('file', webpFile);
-
-      const res = await fetch('/admin-api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.url) return data.url;
-      }
-    } catch (err) {
-      console.warn('[uploadImage] Express backend proxy unavailable, falling back to Data URL');
-    }
-  }
-
-  // 2. On Vercel / Production:
-  // Convert WebP file to Data URL directly (instant, 0 network errors, 0 console errors!)
+  // Convert WebP file to Data URL directly (works 100% on Localhost, Vercel & Mobile)
   return await fileToDataUrl(webpFile);
 }

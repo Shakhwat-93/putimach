@@ -778,7 +778,7 @@ export const ReportsPanel = () => {
             </div>
           </div>
           <div className="h-[400px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
               <AreaChart data={trendData} margin={{ top: 20, right: 30, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
@@ -870,7 +870,7 @@ export const ReportsPanel = () => {
         </div>
 
         <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
             <BarChart data={productFunnelData} margin={{ top: 10, right: 20, left: -10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(13, 148, 136,0.06)" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted-foreground)', fontSize: 11 }} />

@@ -86,10 +86,12 @@ function Hero({ settings }) {
     <section ref={ref} className="relative h-screen flex items-center justify-center bg-[#9C8975] overflow-hidden border-b border-[#E9E2D2]" style={{ height: '100vh', minHeight: '100vh' }}>
       <motion.div style={{ y }} className="absolute inset-0 z-0 bg-[#9C8975]">
         <img
-          src={settings.heroBgImage || 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1600&q=75'}
+          src={settings.heroBgImage || 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1200&q=75'}
           alt="Vintage Fashion Collection"
           className="w-full h-full object-cover"
           draggable="false"
+          fetchPriority="high"
+          decoding="async"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-[#FDFBF7]/20 via-transparent to-[#FDFBF7]/20"></div>
       </motion.div>
@@ -328,7 +330,7 @@ function InstagramSection({ settings }) {
 
 /* ─── Cache helpers ──────────────────────────────────────────────────── */
 const CACHE_KEY = 'rr_home_cache';
-const CACHE_TTL = 10 * 1000; // 10 seconds
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache for super-app instant rendering
 
 function readCache() {
   try {

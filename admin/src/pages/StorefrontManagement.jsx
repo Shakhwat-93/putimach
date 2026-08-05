@@ -1053,10 +1053,23 @@ export const StorefrontManagement = () => {
           .eq('id', editingProduct.id);
         if (error) throw error;
       } else {
+        if (!payload.slug) {
+          payload.slug = generateSlug(payload.name) || 'product-' + Date.now();
+        }
+        let targetId = payload.slug;
+        
+        // Check if ID or slug already exists in current loaded products
+        const existsLocally = products.some(p => p.id === targetId || p.slug === targetId);
+        if (existsLocally) {
+          const uniqueSuffix = Date.now().toString(36).slice(-4);
+          targetId = `${payload.slug}-${uniqueSuffix}`;
+          payload.slug = targetId;
+        }
+
         const { error } = await supabase
           .from('products')
           .insert([{
-            id: payload.slug || 'prod-' + Date.now(),
+            id: targetId,
             data: payload,
             created_at: new Date().toISOString()
           }]);
@@ -1101,10 +1114,22 @@ export const StorefrontManagement = () => {
           .eq('id', editingCategory.id);
         if (error) throw error;
       } else {
+        if (!payload.slug) {
+          payload.slug = generateSlug(payload.name) || 'cat-' + Date.now();
+        }
+        let targetId = payload.slug;
+
+        const existsLocally = categories.some(c => c.id === targetId || c.slug === targetId);
+        if (existsLocally) {
+          const uniqueSuffix = Date.now().toString(36).slice(-4);
+          targetId = `${payload.slug}-${uniqueSuffix}`;
+          payload.slug = targetId;
+        }
+
         const { error } = await supabase
           .from('categories')
           .insert([{
-            id: payload.slug || 'cat-' + Date.now(),
+            id: targetId,
             data: payload,
             created_at: new Date().toISOString()
           }]);

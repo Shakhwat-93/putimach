@@ -260,7 +260,7 @@ export const ModeratorPanel = () => {
           </CardHeader>
           <CardContent className="p-4 pt-2">
             <div className="h-[120px] relative">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={100}>
                 <PieChart>
                   <Pie
                     data={stats.sourceDistribution}

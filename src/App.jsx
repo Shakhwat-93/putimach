@@ -1,14 +1,9 @@
-import { useEffect, createContext, useContext, useState } from 'react';
+import { useEffect, createContext, useContext, useState, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Home from './pages/Home';
-import Shop from './pages/Shop';
-import ProductDetail from './pages/ProductDetail';
-import Checkout from './pages/Checkout';
-import TrackOrder from './pages/TrackOrder';
-import { ShippingInfo, ReturnsExchanges, ContactUs, OurStory, PrivacyPolicy, TermsOfService, CookiePolicy, FAQ } from './pages/InfoPages';
 import { supabase } from './lib/supabase';
 import {
   loadTrackingConfig,
@@ -16,6 +11,29 @@ import {
   injectMetaPixel,
   trackPageView,
 } from './lib/tracking';
+
+// Lazy-loaded secondary pages for route-level code splitting
+const Shop = lazy(() => import('./pages/Shop'));
+const ProductDetail = lazy(() => import('./pages/ProductDetail'));
+const Checkout = lazy(() => import('./pages/Checkout'));
+const TrackOrder = lazy(() => import('./pages/TrackOrder'));
+
+// Lazy-loaded info pages
+const InfoPages = lazy(() => import('./pages/InfoPages'));
+const ShippingInfo = lazy((props) => import('./pages/InfoPages').then(m => ({ default: m.ShippingInfo })));
+const ReturnsExchanges = lazy((props) => import('./pages/InfoPages').then(m => ({ default: m.ReturnsExchanges })));
+const ContactUs = lazy((props) => import('./pages/InfoPages').then(m => ({ default: m.ContactUs })));
+const OurStory = lazy((props) => import('./pages/InfoPages').then(m => ({ default: m.OurStory })));
+const PrivacyPolicy = lazy((props) => import('./pages/InfoPages').then(m => ({ default: m.PrivacyPolicy })));
+const TermsOfService = lazy((props) => import('./pages/InfoPages').then(m => ({ default: m.TermsOfService })));
+const CookiePolicy = lazy((props) => import('./pages/InfoPages').then(m => ({ default: m.CookiePolicy })));
+const FAQ = lazy((props) => import('./pages/InfoPages').then(m => ({ default: m.FAQ })));
+
+const RouteLoader = () => (
+  <div className="min-h-[50vh] flex items-center justify-center">
+    <div className="w-8 h-8 border-3 border-[#C5A880] border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 /* ── Tracking Context ── */
 const TrackingCtx = createContext(null);
@@ -62,13 +80,9 @@ function TrackingProvider({ children }) {
         }
 
         if (config?.pixel_id && config.tracking_enabled !== false) {
-          // Only inject Pixel directly if GTM is NOT managing it
-          // If GTM is set, add Pixel via GTM tags instead
           if (!config.gtm_id) {
             injectMetaPixel(config.pixel_id);
           } else {
-            // Still initialize fbq stub so our manual firePixel calls work
-            // when GTM loads the pixel asynchronously
             window.fbq = window.fbq || function() {
               (window.fbq.q = window.fbq.q || []).push(arguments);
             };
@@ -108,24 +122,26 @@ function FrontendLayout() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+            transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
           >
-            <Routes location={location} key={location.pathname}>
-              <Route path="/" element={<Home />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="/product/:slug" element={<ProductDetail />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/track" element={<TrackOrder />} />
+            <Suspense fallback={<RouteLoader />}>
+              <Routes location={location} key={location.pathname}>
+                <Route path="/" element={<Home />} />
+                <Route path="/shop" element={<Shop />} />
+                <Route path="/product/:slug" element={<ProductDetail />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/track" element={<TrackOrder />} />
 
-              <Route path="/shipping-info" element={<ShippingInfo />} />
-              <Route path="/returns-exchanges" element={<ReturnsExchanges />} />
-              <Route path="/contact-us" element={<ContactUs />} />
-              <Route path="/our-story" element={<OurStory />} />
-              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-              <Route path="/terms-of-service" element={<TermsOfService />} />
-              <Route path="/cookie-policy" element={<CookiePolicy />} />
-              <Route path="/faq" element={<FAQ />} />
-            </Routes>
+                <Route path="/shipping-info" element={<ShippingInfo />} />
+                <Route path="/returns-exchanges" element={<ReturnsExchanges />} />
+                <Route path="/contact-us" element={<ContactUs />} />
+                <Route path="/our-story" element={<OurStory />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/terms-of-service" element={<TermsOfService />} />
+                <Route path="/cookie-policy" element={<CookiePolicy />} />
+                <Route path="/faq" element={<FAQ />} />
+              </Routes>
+            </Suspense>
           </motion.div>
         </AnimatePresence>
       </main>

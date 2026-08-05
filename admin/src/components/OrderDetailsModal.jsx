@@ -6,11 +6,12 @@ import { useAuth } from '../context/AuthContext';
 import { 
   User, Phone, MapPin, Package, Calendar, Clock, 
   History, Edit2, X, Clipboard, Copy, ExternalLink, 
-  Truck, CheckCircle2, AlertCircle, Info, RotateCcw, Loader2
+  Truck, CheckCircle2, AlertCircle, Info, RotateCcw, Loader2, Printer
 } from 'lucide-react';
 import CurrencyIcon from './CurrencyIcon';
 import api from '../lib/api';
 import { useCourierRatio } from '../context/CourierRatioContext';
+import { PrintStudioModal } from './PrintStudioModal';
 import './OrderDetailsModal.css';
 
 export const OrderDetailsModal = ({ isOpen, onClose, order, onEdit }) => {
@@ -21,6 +22,7 @@ export const OrderDetailsModal = ({ isOpen, onClose, order, onEdit }) => {
   const [savedNotesOverride, setSavedNotesOverride] = useState(null);
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [activeTab, setActiveTab] = useState('details'); // 'details' | 'history'
+  const [isPrintStudioOpen, setIsPrintStudioOpen] = useState(false);
   
   // Note Quick Templates States
   const [customTemplates, setCustomTemplates] = useState(() => {
@@ -560,15 +562,26 @@ export const OrderDetailsModal = ({ isOpen, onClose, order, onEdit }) => {
                   <User size={18} className="text-accent" />
                   <span>Customer Information</span>
                 </div>
-                <button
-                  type="button"
-                  className={`section-copy-btn ${copiedSummary ? 'copied' : ''}`}
-                  onClick={copyOrderSummary}
-                  title="Copy customer and order summary"
-                >
-                  <Copy size={14} />
-                  <span>{copiedSummary ? 'Copied' : 'Copy'}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="section-copy-btn text-teal-400 border border-teal-500/30 hover:bg-teal-500/10 px-2.5 py-1 rounded transition-colors flex items-center gap-1 text-xs font-semibold"
+                    onClick={() => setIsPrintStudioOpen(true)}
+                    title="Open Print Studio for Invoice or Sticker"
+                  >
+                    <Printer size={14} />
+                    <span>Print Invoice</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`section-copy-btn ${copiedSummary ? 'copied' : ''}`}
+                    onClick={copyOrderSummary}
+                    title="Copy customer and order summary"
+                  >
+                    <Copy size={14} />
+                    <span>{copiedSummary ? 'Copied' : 'Copy'}</span>
+                  </button>
+                </div>
               </div>
               <div className="info-list">
                 <div className="info-item">
@@ -1035,6 +1048,9 @@ export const OrderDetailsModal = ({ isOpen, onClose, order, onEdit }) => {
 
         {/* Footer Actions */}
         <div className="details-footer-actions">
+           <Button variant="secondary" onClick={() => setIsPrintStudioOpen(true)} icon={<Printer size={18} />}>
+             Print Invoice / Label
+           </Button>
            <Button variant="secondary" onClick={onClose} icon={<X size={18} />}>Close Window</Button>
            {onEdit && (
              <Button variant="primary" onClick={() => { onClose(); onEdit(effectiveOrder); }} icon={<Edit2 size={18} />}>
@@ -1043,6 +1059,12 @@ export const OrderDetailsModal = ({ isOpen, onClose, order, onEdit }) => {
            )}
         </div>
       </div>
+
+      <PrintStudioModal 
+        isOpen={isPrintStudioOpen} 
+        onClose={() => setIsPrintStudioOpen(false)} 
+        orders={[effectiveOrder]} 
+      />
     </Modal>
   );
 };

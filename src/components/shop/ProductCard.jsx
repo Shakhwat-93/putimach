@@ -69,10 +69,13 @@ export default function ProductCard({ product, index = 0 }) {
     >
       <Link to={`/product/${product.slug}`} className="block">
         <div className="relative aspect-[3/4] rounded-2xl bg-base-900 overflow-hidden border border-base-400/30 group-hover:border-base-400/80 transition-all duration-300">
-          {/* Product Image */}
           <motion.img
-            src={product.image}
+            src={product.image || 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80'}
             alt={product.name}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80';
+            }}
             animate={{ scale: hovered ? 1.06 : 1 }}
             transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
             className="w-full h-full object-cover"

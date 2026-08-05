@@ -10,24 +10,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-const supabaseOthers = createClient(supabaseUrl, supabaseAnonKey, {
-  global: {
-    headers: {
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    }
-  }
-});
-const supabaseOrders = ordersUrl && ordersAnonKey ? createClient(ordersUrl, ordersAnonKey, {
-  global: {
-    headers: {
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    }
-  }
-}) : supabaseOthers;
+const supabaseOthers = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseOrders = ordersUrl && ordersAnonKey ? createClient(ordersUrl, ordersAnonKey) : supabaseOthers;
 
 // Transparent routing proxy to support multi-database split
 export const supabase = new Proxy({}, {

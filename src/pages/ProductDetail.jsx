@@ -239,6 +239,10 @@ export default function ProductDetail() {
                     <img
                       src={img}
                       alt={`${product.name} - ${i + 1}`}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80';
+                      }}
                       className="w-full h-auto max-h-[70vh] object-contain rounded-xl select-none"
                     />
                   </div>
@@ -306,7 +310,15 @@ export default function ProductDetail() {
                       activeImg === i ? 'border-brand shadow-glow-sm' : 'border-transparent opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={img}
+                      alt=""
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80';
+                      }}
+                      className="w-full h-full object-cover"
+                    />
                   </button>
                 ))}
               </div>
