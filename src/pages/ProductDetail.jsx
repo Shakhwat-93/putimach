@@ -81,31 +81,45 @@ export default function ProductDetail() {
   }, [activeImg, images.length]);
 
   useEffect(() => {
+    let isMounted = true;
     async function loadProduct() {
+      // If we already have the product in state/cache, don't trigger full screen loading
       setLoading(true);
       try {
         const prod = await getProductBySlug(slug);
-        setProduct(prod);
-        setSelectedSize(prod?.sizes?.[0] || null);
-        setSelectedColor(prod?.colors?.[0] || null);
+        if (!isMounted) return;
 
-        // Fire ViewContent tracking event after product loads
         if (prod) {
+          setProduct(prod);
+          setSelectedSize(prod?.sizes?.[0] || null);
+          setSelectedColor(prod?.colors?.[0] || null);
           trackViewContent(prod);
-        }
+          setLoading(false); // Paint main product immediately!
 
-        if (prod?.category) {
-          const rel = await getProducts({ category: prod.category });
-          setRelatedProducts(rel.filter((p) => p.id !== prod.id).slice(0, 4));
+          // Fetch related products concurrently in background
+          if (prod?.category) {
+            getProducts({ category: prod.category })
+              .then(rel => {
+                if (isMounted) {
+                  setRelatedProducts(rel.filter((p) => p.id !== prod.id).slice(0, 4));
+                }
+              })
+              .catch(err => console.warn('Error fetching related products:', err));
+          }
+        } else {
+          setProduct(null);
+          setLoading(false);
         }
       } catch (err) {
         console.error('Error fetching product detail:', err);
-        setProduct(null);
-      } finally {
-        setLoading(false);
+        if (isMounted) {
+          setProduct(null);
+          setLoading(false);
+        }
       }
     }
     loadProduct();
+    return () => { isMounted = false; };
   }, [slug]);
 
   if (loading) {
