@@ -177,8 +177,7 @@ export function ContactUs() {
             <div className="border-t border-[#E9E2D2] pt-6">
               <h2 className="font-serif text-[#C5A880] text-xs uppercase tracking-widest mb-1">Find Us</h2>
               <h3 className="font-serif text-lg text-[#1C1613] uppercase tracking-wider mb-2">{flagName}</h3>
-              <p className="text-xs text-[#7C6E65] mb-4 normal-case">{flagAddr}</p>
-              <a href={mapsUrl} target="_blank" rel="noreferrer" className="border border-[#C5A880] bg-transparent text-[#1C1613] hover:bg-[#C5A880] hover:text-[#FDFBF7] font-semibold tracking-[0.2em] text-[10px] uppercase px-8 py-3.5 transition-all duration-300 inline-block">Open In Google Maps</a>
+              <p className="text-xs text-[#7C6E65] normal-case">{flagAddr}</p>
             </div>
           </div>
         )}
