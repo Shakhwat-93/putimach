@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import './PrintStudioModal.css';
 import { 
   Printer, X, FileText, Tag, Receipt, Grid, 
@@ -88,11 +87,51 @@ export const PrintStudioModal = ({
     setToggles(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const printWorkspaceRef = useRef(null);
+
   const handlePrint = () => {
-    window.print();
+    const printContent = printWorkspaceRef.current;
+    if (!printContent) return;
+
+    // Collect all stylesheets from the current page
+    const styles = Array.from(document.styleSheets)
+      .map(sheet => {
+        try {
+          return Array.from(sheet.cssRules).map(r => r.cssText).join('\n');
+        } catch { return ''; }
+      })
+      .join('\n');
+
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Print - PutiMach</title>
+  <style>
+    ${styles}
+    @page { margin: 10mm; }
+    body { margin: 0; padding: 0; background: #fff; }
+    .print-workspace { background: #fff; padding: 0; }
+    .print-document-sheet { box-shadow: none !important; margin: 0 auto 20px auto; }
+  </style>
+</head>
+<body>
+  ${printContent.innerHTML}
+</body>
+</html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
   };
 
-  return createPortal(
+  return (
     <div className="print-studio-overlay">
       <div className="print-studio-container">
         
@@ -276,7 +315,7 @@ export const PrintStudioModal = ({
         </div>
 
         {/* ── Live Preview Sheet Workspace ── */}
-        <div className="print-workspace">
+        <div className="print-workspace" ref={printWorkspaceRef}>
           {activeOrders.map((order, idx) => (
             <div 
               key={order.id || idx} 
@@ -323,7 +362,7 @@ export const PrintStudioModal = ({
 
       </div>
     </div>
-  );
+    );
 };
 
 /* ── Sub-component 1: Full A4 Invoice Renderer ── */
@@ -599,7 +638,6 @@ const RenderPOSReceipt = ({ order, brand, toggles }) => {
         TOTAL: ৳{grandTotal.toLocaleString()}
       </div>
       <div className="text-center mt-3 text-[9px] italic">Thank you for shopping with us!</div>
-    </div>,
-    document.body
+    </div>
   );
 };
