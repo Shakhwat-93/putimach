@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar, ChevronDown, Check } from 'lucide-react';
 import './DateRangePicker.css';
@@ -156,7 +156,21 @@ export const DateRangePicker = ({ onChange, value }) => {
   const [isMobileSheet, setIsMobileSheet] = useState(() => (
     typeof window !== 'undefined' ? window.innerWidth <= 767 : false
   ));
+  const [dropdownAlign, setDropdownAlign] = useState('left'); // 'left' | 'right'
   const containerRef = useRef(null);
+
+  // Calculate smart alignment when opening dropdown
+  const handleOpen = useCallback(() => {
+    if (!isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const dropdownWidth = Math.min(520, viewportWidth - 24);
+      // If dropdown would overflow right edge, align to right instead
+      const wouldOverflow = rect.left + dropdownWidth > viewportWidth - 12;
+      setDropdownAlign(wouldOverflow ? 'right' : 'left');
+    }
+    setIsOpen(prev => !prev);
+  }, [isOpen]);
 
   const toInputDate = (date) => {
     if (!date) return '';
@@ -251,7 +265,7 @@ export const DateRangePicker = ({ onChange, value }) => {
   };
 
   const dropdownContent = (
-    <div className={`date-picker-dropdown liquid-glass ${isMobileSheet ? 'mobile-sheet' : ''}`}>
+    <div className={`date-picker-dropdown liquid-glass ${isMobileSheet ? 'mobile-sheet' : ''} align-${dropdownAlign}`}>
       <div className="date-picker-layout">
         <div className="presets-sidebar">
           {PRESETS.map((preset) => (
@@ -311,7 +325,7 @@ export const DateRangePicker = ({ onChange, value }) => {
     <div className="date-range-picker-container" ref={containerRef}>
       <button
         className={`date-picker-trigger ${isOpen ? 'active' : ''}`}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleOpen}
         type="button"
       >
         <div className="trigger-content">

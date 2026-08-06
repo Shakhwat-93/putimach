@@ -57,6 +57,12 @@
   max-width: calc(100vw - 24px);
 }
 
+/* Right-align: anchor to right edge of trigger instead of left */
+.date-picker-dropdown.align-right {
+  left: auto;
+  right: 0;
+}
+
 .date-picker-layout {
   display: flex;
   height: 380px;
