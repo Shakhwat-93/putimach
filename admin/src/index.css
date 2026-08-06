@@ -1,4 +1,4 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+/* Poppins is loaded via index.html <link> for optimal performance */
 
 @tailwind base;
 @tailwind components;
@@ -242,13 +242,14 @@
 }
 
 body {
-  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  font-family: 'Poppins', system-ui, -apple-system, sans-serif;
   background-color: var(--bg-main);
   background-image: var(--bg-gradient);
   background-attachment: fixed;
   color: var(--text-primary);
   font-size: var(--fs-body);
-  line-height: 1.5;
+  font-weight: 400;
+  line-height: 1.6;
   min-height: 100vh;
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
@@ -257,10 +258,60 @@ body {
   overscroll-behavior-y: contain;
 }
 
-h1, h2, h3, h4, h5, h6, .modal-title, .boc-title, .title, .upm-title, .cem-title {
-  font-family: 'Cinzel', serif;
+/* ── Heading System (Poppins SemiBold/Bold/ExtraBold) ── */
+h1, h2, h3, h4, h5, h6,
+.modal-title, .boc-title, .title, .upm-title, .cem-title {
+  font-family: 'Poppins', system-ui, sans-serif;
   font-weight: 700;
-  letter-spacing: 0.03em;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+h1 { font-size: var(--fs-h1); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: var(--fs-h2); font-weight: 700; letter-spacing: -0.015em; }
+h3 { font-size: var(--fs-h3); font-weight: 600; }
+h4 { font-size: var(--fs-body); font-weight: 600; }
+h5 { font-size: var(--fs-small); font-weight: 600; }
+h6 { font-size: var(--fs-xs);   font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ── Display / Hero Text ── */
+.font-display, .text-display { font-family: 'Poppins', sans-serif; font-weight: 800; letter-spacing: -0.025em; }
+
+/* ── Utility Classes ── */
+.font-poppins         { font-family: 'Poppins', sans-serif; }
+.font-light           { font-weight: 300; }
+.font-regular         { font-weight: 400; }
+.font-medium          { font-weight: 500; }
+.font-semibold        { font-weight: 600; }
+.font-bold            { font-weight: 700; }
+.font-extrabold       { font-weight: 800; }
+
+/* ── Labels, Badges, Overlines ── */
+label          { font-family: 'Poppins', sans-serif; font-weight: 500; font-size: var(--fs-small); }
+small          { font-family: 'Poppins', sans-serif; font-weight: 400; font-size: var(--fs-xs); }
+caption        { font-family: 'Poppins', sans-serif; font-weight: 400; font-size: var(--fs-xs); }
+
+/* ── Form Elements inherit Poppins ── */
+input, textarea, select, button {
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-weight: 400;
+}
+
+button {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* ── Table Typography ── */
+table, th, td {
+  font-family: 'Poppins', system-ui, sans-serif;
+}
+
+th {
+  font-weight: 600;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 /* ===== SELECTION ===== */
