@@ -269,7 +269,96 @@ export const OrdersBoard = () => {
 
   const handleBulkStatusChange = async (status) => {};
 
-  const handleBulkDelete = async () => {};
+  // ── Single Order Delete ──
+  const handleSingleDelete = async (order) => {
+    const confirmed = await confirmDialog({
+      title: '🗑️ Delete Order?',
+      message: `Are you sure you want to permanently delete order #${order.id} (${order.customer_name})? This cannot be undone.`,
+      confirmText: 'Yes, Delete',
+      cancelText: 'Cancel',
+      variant: 'danger'
+    });
+    if (!confirmed) return;
+
+    try {
+      await deleteOrder(order.id);
+      setSelectedOrderIds(prev => prev.filter(id => id !== order.id));
+      showSuccess(`Order #${order.id} deleted successfully.`);
+    } catch (err) {
+      showError('Failed to delete order. Please try again.');
+    }
+  };
+
+  // ── Bulk Delete (selected orders) ──
+  const handleBulkDelete = async () => {
+    if (selectedOrderIds.length === 0) return;
+    const confirmed = await confirmDialog({
+      title: `🗑️ Delete ${selectedOrderIds.length} Orders?`,
+      message: `This will permanently delete ${selectedOrderIds.length} selected orders from the database. This action CANNOT be undone. Are you sure?`,
+      confirmText: `Delete ${selectedOrderIds.length} Orders`,
+      cancelText: 'Cancel',
+      variant: 'danger'
+    });
+    if (!confirmed) return;
+
+    let deletedCount = 0;
+    let failedCount = 0;
+    for (const orderId of selectedOrderIds) {
+      try {
+        await deleteOrder(orderId);
+        deletedCount++;
+      } catch {
+        failedCount++;
+      }
+    }
+    setSelectedOrderIds([]);
+    if (failedCount > 0) {
+      showError(`Deleted ${deletedCount} orders. Failed to delete ${failedCount} orders.`);
+    } else {
+      showSuccess(`Successfully deleted ${deletedCount} orders.`);
+    }
+  };
+
+  // ── Filter-wise / Status-wise Delete ──
+  const handleDeleteByFilter = async () => {
+    const count = filteredOrders.length;
+    if (count === 0) {
+      showError('No orders match the current filter to delete.');
+      return;
+    }
+    const filterDesc = filters.status && filters.status !== 'All'
+      ? `status "${filters.status}"`
+      : filters.productName
+      ? `product "${filters.productName}"`
+      : 'current filter';
+
+    const confirmed = await confirmDialog({
+      title: `🗑️ Delete All ${count} Filtered Orders?`,
+      message: `You are about to permanently delete ALL ${count} orders matching ${filterDesc}. This CANNOT be undone. Type DELETE to confirm.`,
+      confirmText: `Delete All ${count} Orders`,
+      cancelText: 'Cancel',
+      variant: 'danger'
+    });
+    if (!confirmed) return;
+
+    let deletedCount = 0;
+    let failedCount = 0;
+    const ids = filteredOrders.map(o => o.id);
+    for (const orderId of ids) {
+      try {
+        await deleteOrder(orderId);
+        deletedCount++;
+      } catch {
+        failedCount++;
+      }
+    }
+    setSelectedOrderIds([]);
+    if (failedCount > 0) {
+      showError(`Deleted ${deletedCount} orders. Failed to delete ${failedCount} orders.`);
+    } else {
+      showSuccess(`Successfully deleted ${deletedCount} filtered orders.`);
+    }
+  };
 
   const handleOpenEditModal = (order) => {
     setSelectedOrderForEdit(order);
@@ -872,6 +961,44 @@ export const OrdersBoard = () => {
         <div className="text-sm text-muted-foreground animate-pulse">Refreshing product-wise order counts...</div>
       )}
 
+      {/* ── Bulk Action Bar (shown when orders are selected) ── */}
+      {selectedOrderIds.length > 0 && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-rose-50 border border-rose-200 text-sm animate-slide-up">
+          <span className="font-semibold text-rose-700">
+            {selectedOrderIds.length} order{selectedOrderIds.length > 1 ? 's' : ''} selected
+          </span>
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
+              onClick={handleClearSelection}
+            >
+              Clear Selection
+            </button>
+            <button
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 transition-colors shadow-sm"
+              onClick={handleBulkDelete}
+            >
+              <Trash2 size={14} />
+              Delete {selectedOrderIds.length} Selected
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Filter-wise / Status-wise Delete Button ── */}
+      {filteredOrders.length > 0 && (filters.status !== 'All' || filters.productName || filters.searchTerm || filters.source !== 'All') && (
+        <div className="flex items-center justify-end">
+          <button
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 border border-rose-200 bg-rose-50 hover:bg-rose-100 transition-colors"
+            onClick={handleDeleteByFilter}
+            title={`Delete all ${filteredOrders.length} filtered orders`}
+          >
+            <Trash2 size={13} />
+            Delete All {filteredOrders.length} Filtered Orders
+          </button>
+        </div>
+      )}
+
       {/* Table (desktop) */}
       <div className="hidden md:block rounded-2xl border border-border bg-card overflow-hidden shadow-sm animate-slide-up">
         <table className="w-full text-sm text-left">
@@ -905,6 +1032,7 @@ export const OrdersBoard = () => {
                   onStatusChange={updateOrderStatus}
                   onEdit={handleOpenEditModal}
                   onPrint={handleOpenPrintStudio}
+                  onDelete={handleSingleDelete}
                   isSelected={selectedOrderIds.includes(order.id)}
                   onSelect={handleSelectOrder}
                   fraudFlag={fraudFlags[order.id]}

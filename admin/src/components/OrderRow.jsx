@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import ReactDOM from 'react-dom';
-import { FileText, AlertTriangle, Phone, Copy, MessageCircle, Edit2, Printer } from 'lucide-react';
+import { FileText, AlertTriangle, Phone, Copy, MessageCircle, Edit2, Printer, Trash2 } from 'lucide-react';
 import CurrencyIcon from './CurrencyIcon';
 import { ResponseTimer } from './ResponseTimer';
 import './OrderRow.css';
@@ -46,7 +46,7 @@ const SourceBadge = ({ traffic_source, source }) => {
   return <span className={`source-badge ${cls}`}>{label}</span>;
 };
 
-export const OrderRow = ({ order, onDetails, onStatusChange, onEdit, onPrint, isSelected, onSelect, fraudFlag, automationFlag, isUnread = false, duplicateWarning = null }) => {
+export const OrderRow = ({ order, onDetails, onStatusChange, onEdit, onPrint, onDelete, isSelected, onSelect, fraudFlag, automationFlag, isUnread = false, duplicateWarning = null }) => {
   const [copied, setCopied] = useState(false);
 
   // Derive row-level SLA class for left border highlight
@@ -330,6 +330,13 @@ export const OrderRow = ({ order, onDetails, onStatusChange, onEdit, onPrint, is
             onClick={(e) => { e.stopPropagation(); onPrint && onPrint(order); }}
           >
             <Printer size={14} />
+          </button>
+          <button 
+            className="h-7 w-7 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors flex items-center justify-center" 
+            title="Delete Order" 
+            onClick={(e) => { e.stopPropagation(); onDelete && onDelete(order); }}
+          >
+            <Trash2 size={14} />
           </button>
         </div>
       </td>
