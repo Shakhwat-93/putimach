@@ -524,38 +524,76 @@
 
 /* Printing Media Rules */
 @media print {
-  body * {
-    visibility: hidden !important;
-  }
-
-  .print-studio-overlay,
+  /* Hide standard page UI (headers, sidebars, navigation controls) */
+  body > *:not(.print-studio-overlay),
+  #root > *:not(.print-studio-overlay),
+  header,
+  nav,
+  aside,
   .print-studio-header,
-  .print-studio-toolbar,
-  .print-options-panel {
+  .print-options-panel,
+  .print-studio-toolbar {
     display: none !important;
   }
 
-  .print-workspace {
+  /* Keep Print Studio Overlay container active and visible */
+  .print-studio-overlay {
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;
     width: 100% !important;
     height: auto !important;
+    min-height: 100% !important;
+    background: #ffffff !important;
     padding: 0 !important;
     margin: 0 !important;
+    display: block !important;
+    z-index: 999999 !important;
+    overflow: visible !important;
+    backdrop-filter: none !important;
+  }
+
+  .print-studio-container {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
     background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  .print-studio-body,
+  .print-workspace {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
     overflow: visible !important;
   }
 
   .print-document-sheet {
+    position: relative !important;
     visibility: visible !important;
+    display: block !important;
     box-shadow: none !important;
-    margin: 0 !important;
+    margin: 0 auto 20px auto !important;
+    padding: 0 !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
     page-break-after: always !important;
     break-after: page !important;
   }
 
   .print-document-sheet * {
     visibility: visible !important;
+    color: #000000 !important;
   }
 }
