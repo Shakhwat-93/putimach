@@ -66,8 +66,14 @@ const TYPE_CONFIG = {
 export function useConfirmDialog() {
   // Confirm dialog state
   const [confirm, setConfirm] = useState({
-    isOpen: false, title: '', description: '',
-    onConfirm: null, confirmLabel: 'Continue', isDanger: false,
+    isOpen: false,
+    title: '',
+    description: '',
+    confirmLabel: 'Continue',
+    cancelLabel: 'Cancel',
+    isDanger: false,
+    onConfirmHandler: null,
+    onCancelHandler: null,
   });
 
   // Alert dialog state
@@ -76,13 +82,47 @@ export function useConfirmDialog() {
   });
 
   // ── confirmDialog ────────────────────────────────────────────────────────────
-  const confirmDialog = ({ title, description, onConfirm, confirmLabel = 'Continue', isDanger = false }) => {
-    setConfirm({
-      isOpen: true, title, description, confirmLabel, isDanger,
-      onConfirm: () => {
-        onConfirm();
-        setConfirm(p => ({ ...p, isOpen: false }));
-      },
+  const confirmDialog = ({
+    title = 'Confirm Action',
+    description = '',
+    message = '',
+    onConfirm = null,
+    confirmText = '',
+    confirmLabel = 'Continue',
+    cancelText = '',
+    cancelLabel = 'Cancel',
+    isDanger = false,
+    variant = ''
+  }) => {
+    return new Promise((resolve) => {
+      const finalDescription = description || message || '';
+      const finalConfirmLabel = confirmText || confirmLabel || 'Continue';
+      const finalCancelLabel = cancelText || cancelLabel || 'Cancel';
+      const isDangerAction = Boolean(isDanger || variant === 'danger');
+
+      setConfirm({
+        isOpen: true,
+        title,
+        description: finalDescription,
+        confirmLabel: finalConfirmLabel,
+        cancelLabel: finalCancelLabel,
+        isDanger: isDangerAction,
+        onConfirmHandler: () => {
+          setConfirm((p) => ({ ...p, isOpen: false }));
+          if (typeof onConfirm === 'function') {
+            try {
+              onConfirm();
+            } catch (err) {
+              console.error('onConfirm execution error:', err);
+            }
+          }
+          resolve(true);
+        },
+        onCancelHandler: () => {
+          setConfirm((p) => ({ ...p, isOpen: false }));
+          resolve(false);
+        }
+      });
     });
   };
 
@@ -103,17 +143,28 @@ export function useConfirmDialog() {
   const ConfirmDialogComponent = (
     <>
       {/* ── Confirm Dialog ── */}
-      <AlertDialog open={confirm.isOpen} onOpenChange={open => setConfirm(p => ({ ...p, isOpen: open }))}>
+      <AlertDialog
+        open={confirm.isOpen}
+        onOpenChange={(open) => {
+          if (!open && confirm.isOpen) {
+            if (confirm.onCancelHandler) confirm.onCancelHandler();
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{confirm.title}</AlertDialogTitle>
-            <AlertDialogDescription>{confirm.description}</AlertDialogDescription>
+            {confirm.description && (
+              <AlertDialogDescription>{confirm.description}</AlertDialogDescription>
+            )}
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => confirm.onCancelHandler && confirm.onCancelHandler()}>
+              {confirm.cancelLabel}
+            </AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirm.onConfirm}
-              className={confirm.isDanger ? 'bg-red-600 hover:bg-red-700 text-white' : ''}
+              onClick={() => confirm.onConfirmHandler && confirm.onConfirmHandler()}
+              className={confirm.isDanger ? 'bg-red-600 hover:bg-red-700 text-white font-semibold' : ''}
             >
               {confirm.confirmLabel}
             </AlertDialogAction>
@@ -122,21 +173,21 @@ export function useConfirmDialog() {
       </AlertDialog>
 
       {/* ── Alert Dialog ── */}
-      <AlertDialog open={alertState.isOpen} onOpenChange={open => setAlertState(p => ({ ...p, isOpen: open }))}>
+      <AlertDialog open={alertState.isOpen} onOpenChange={(open) => setAlertState((p) => ({ ...p, isOpen: open }))}>
         <AlertDialogContent style={{ maxWidth: 420 }}>
           <AlertDialogHeader>
-            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', gap:8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8 }}>
               <Icon />
               <AlertDialogTitle style={{ marginTop: 4 }}>{alertState.title}</AlertDialogTitle>
-              <AlertDialogDescription style={{ textAlign:'center' }}>
+              <AlertDialogDescription style={{ textAlign: 'center' }}>
                 {alertState.message}
               </AlertDialogDescription>
             </div>
           </AlertDialogHeader>
-          <AlertDialogFooter style={{ justifyContent:'center' }}>
+          <AlertDialogFooter style={{ justifyContent: 'center' }}>
             <AlertDialogAction
               className={`dialog-ok-btn ${btnClass}`}
-              onClick={() => setAlertState(p => ({ ...p, isOpen: false }))}
+              onClick={() => setAlertState((p) => ({ ...p, isOpen: false }))}
             >
               {label}
             </AlertDialogAction>
