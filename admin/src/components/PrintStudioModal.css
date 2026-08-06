@@ -524,19 +524,23 @@
 
 /* Printing Media Rules */
 @media print {
-  /* Hide standard page UI (headers, sidebars, navigation controls) */
-  body > *:not(.print-studio-overlay),
-  #root > *:not(.print-studio-overlay),
-  header,
-  nav,
-  aside,
-  .print-studio-header,
-  .print-options-panel,
-  .print-studio-toolbar {
+  /* Hide main React root application during print */
+  #root,
+  #root * {
     display: none !important;
   }
 
-  /* Keep Print Studio Overlay container active and visible */
+  /* Reset html & body for full page printing */
+  html, body {
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+  }
+
+  /* Render Print Studio Overlay container directly on document.body */
   .print-studio-overlay {
     position: absolute !important;
     left: 0 !important;
@@ -548,7 +552,7 @@
     padding: 0 !important;
     margin: 0 !important;
     display: block !important;
-    z-index: 999999 !important;
+    z-index: 9999999 !important;
     overflow: visible !important;
     backdrop-filter: none !important;
   }
@@ -564,6 +568,14 @@
     border-radius: 0 !important;
     display: block !important;
     overflow: visible !important;
+    margin: 0 !important;
+  }
+
+  /* Hide screen-only modal controls and toolbars */
+  .print-studio-header,
+  .print-options-panel,
+  .print-studio-toolbar {
+    display: none !important;
   }
 
   .print-studio-body,

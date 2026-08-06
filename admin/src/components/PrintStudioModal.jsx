@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import './PrintStudioModal.css';
 import { 
   Printer, X, FileText, Tag, Receipt, Grid, 
@@ -91,7 +92,7 @@ export const PrintStudioModal = ({
     window.print();
   };
 
-  return (
+  return createPortal(
     <div className="print-studio-overlay">
       <div className="print-studio-container">
         
@@ -598,6 +599,7 @@ const RenderPOSReceipt = ({ order, brand, toggles }) => {
         TOTAL: ৳{grandTotal.toLocaleString()}
       </div>
       <div className="text-center mt-3 text-[9px] italic">Thank you for shopping with us!</div>
-    </div>
+    </div>,
+    document.body
   );
 };
