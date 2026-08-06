@@ -18,6 +18,14 @@ function copyFolderSync(from, to) {
 }
 
 try {
+  console.log('=== Cleaning Previous Build Artifacts ===');
+  if (fs.existsSync('dist')) {
+    fs.rmSync('dist', { recursive: true, force: true });
+  }
+  if (fs.existsSync(path.join('admin', 'dist'))) {
+    fs.rmSync(path.join('admin', 'dist'), { recursive: true, force: true });
+  }
+
   console.log('=== Building Storefront ===');
   execSync('npx vite build', { stdio: 'inherit' });
 
