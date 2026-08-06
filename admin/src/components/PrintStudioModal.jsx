@@ -81,13 +81,13 @@ export const PrintStudioModal = ({
     fetchStoreBrand();
   }, [isOpen]);
 
+  const printWorkspaceRef = useRef(null);
+
   if (!isOpen || activeOrders.length === 0) return null;
 
   const handleToggle = (key) => {
     setToggles(prev => ({ ...prev, [key]: !prev[key] }));
   };
-
-  const printWorkspaceRef = useRef(null);
 
   const handlePrint = () => {
     const printContent = printWorkspaceRef.current;
