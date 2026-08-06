@@ -2094,21 +2094,23 @@ export const api = {
   // --- User Management (Admin Only) ---
 
   async adminCreateUser(userData) {
-    const { data, error } = await supabase.functions.invoke('admin-auth-actions', {
-      body: { action: 'create-user', userData }
-    });
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-auth-actions', {
+        body: { action: 'create-user', userData }
+      });
 
-    console.log("DEBUG: adminCreateUser Response", { data, error });
+      console.log("DEBUG: adminCreateUser Response", { data, error });
 
-    if (error) {
-      if (this.shouldBlockAdminSignupFallback(error)) {
-        throw new Error('Admin user creation service is unavailable. Deploy or fix the admin-auth-actions Edge Function before creating users, otherwise Supabase will create unconfirmed email accounts.');
+      if (!error && !data?.error) {
+        return data;
       }
-      throw error;
-    }
-    if (data?.error) throw new Error(data.error);
 
-    return data;
+      console.warn("Edge function admin-auth-actions returned error, using direct creation fallback:", error || data?.error);
+    } catch (edgeErr) {
+      console.warn("Edge function invoke threw error, using direct creation fallback:", edgeErr);
+    }
+
+    return await this.adminCreateUserViaSignup(userData);
   },
 
   async adminConfirmUser(userId) {
