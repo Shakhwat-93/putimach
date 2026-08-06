@@ -848,10 +848,36 @@ export const OrderProvider = ({ children }) => {
   );
 };
 
+const FALLBACK_ORDER_CONTEXT = {
+  orders: [],
+  totalCount: 0,
+  page: 1,
+  pageSize: 50,
+  filters: { searchTerm: '', status: 'All', source: 'All', productName: '', dateRange: { start: null, end: null } },
+  loading: true,
+  stats: { total: 0, completed: 0, pending: 0, revenue: 0, addedTodayCount: 0, sourceDistribution: [], trendData: [], confirmationData: [] },
+  inventory: [],
+  toyBoxes: [],
+  fraudFlags: {},
+  automationFlags: {},
+  velocityMetrics: null,
+  setPage: () => {},
+  setFilters: () => {},
+  refetchOrders: async () => {},
+  updateOrderStatus: async () => {},
+  addOrder: async () => {},
+  deleteOrder: async () => {},
+  updateOrder: async () => {},
+  autoDistributeOrders: async () => {},
+  fetchOrderLogs: async () => [],
+  fetchStats: async () => ({})
+};
+
 export const useOrders = () => {
   const context = useContext(OrderContext);
   if (!context) {
-    throw new Error('useOrders must be used within an OrderProvider');
+    console.warn('useOrders: context not available, using fallback safe context');
+    return FALLBACK_ORDER_CONTEXT;
   }
   return context;
 };
