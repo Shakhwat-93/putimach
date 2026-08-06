@@ -715,72 +715,31 @@ export default function ProductDetail() {
                 </div>
 
                 {/* Uploaded Size Chart Image / Diagram */}
-                {sizeChartImageUrl && (
+                {sizeChartImageUrl ? (
                   <div className="mb-6 rounded-2xl overflow-hidden border border-base-300 bg-base-950/80 p-3 text-center">
-                    <p className="text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-2">Visual Size Guide Diagram</p>
+                    <p className="text-[10px] font-bold text-surface-muted uppercase tracking-wider mb-2">Size Chart Diagram</p>
                     <a href={sizeChartImageUrl} target="_blank" rel="noreferrer" className="block cursor-zoom-in">
                       <img 
                         src={sizeChartImageUrl} 
                         alt="Size Chart Diagram" 
-                        className="w-full h-auto max-h-[380px] object-contain mx-auto rounded-xl shadow-md border border-base-300/50 hover:scale-[1.02] transition-transform duration-300"
+                        className="w-full h-auto max-h-[420px] object-contain mx-auto rounded-xl shadow-md border border-base-300/50 hover:scale-[1.01] transition-transform duration-300"
                       />
                     </a>
                   </div>
-                )}
-
-                {/* Table */}
-                {rows.length > 0 ? (
-                  <div className="rounded-2xl border border-base-300 overflow-hidden bg-base-950 shadow-inner overflow-x-auto">
-                    <table className="w-full text-center border-collapse font-mono text-sm">
-                      <thead>
-                        <tr className="border-b border-base-300 bg-base-900/80">
-                          {cols.map((col, idx) => (
-                            <th key={idx} className="py-3.5 px-4 text-xs font-bold text-surface-secondary uppercase tracking-wider border-r border-base-300/50 last:border-0">
-                              {col}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-base-300/50">
-                        {rows.map((row, rIdx) => (
-                          <tr key={rIdx} className="hover:bg-base-900/40 transition-colors group">
-                            {cols.map((col, cIdx) => (
-                              <td key={cIdx} className={`py-3.5 px-4 border-r border-base-300/50 last:border-0 ${cIdx === 0 ? 'font-bold text-brand bg-brand/5 group-hover:bg-brand/10' : 'text-surface-primary'}`}>
-                                {row[col] || '—'}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
                 ) : (
-                  <div className="rounded-2xl border border-base-300 overflow-hidden bg-base-950 shadow-inner overflow-x-auto">
-                    <table className="w-full text-center border-collapse font-mono text-sm">
-                      <thead>
-                        <tr className="border-b border-base-300 bg-base-900/80">
-                          {['Size', 'Chest', 'Length', 'Shoulder'].map((h) => (
-                            <th key={h} className="py-3.5 px-4 text-xs font-bold text-surface-secondary uppercase tracking-wider border-r border-base-300/50 last:border-0">{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-base-300/50">
-                        {[
-                          { Size: 'M', Chest: '38', Length: '27', Shoulder: '17.5' },
-                          { Size: 'L', Chest: '40', Length: '28', Shoulder: '18.5' },
-                          { Size: 'XL', Chest: '42', Length: '29', Shoulder: '19.5' },
-                          { Size: 'XXL', Chest: '44', Length: '30', Shoulder: '20.5' },
-                        ].map((row, rIdx) => (
-                          <tr key={rIdx} className="hover:bg-base-900/40 transition-colors group">
-                            {['Size', 'Chest', 'Length', 'Shoulder'].map((col, cIdx) => (
-                              <td key={cIdx} className={`py-3.5 px-4 border-r border-base-300/50 last:border-0 ${cIdx === 0 ? 'font-bold text-brand bg-brand/5 group-hover:bg-brand/10' : 'text-surface-primary'}`}>
-                                {row[col]}
-                              </td>
-                            ))}
-                          </tr>
+                  <div className="mb-6 rounded-2xl border border-dashed border-base-300 bg-base-950/40 p-8 text-center">
+                    <Ruler size={32} className="mx-auto text-surface-muted mb-3 opacity-50" />
+                    <p className="text-sm font-bold text-surface-secondary">No Size Chart Image Uploaded</p>
+                    <p className="text-xs text-surface-muted mt-1">Please refer to available sizes for this product.</p>
+                    {product.sizes?.length > 0 && (
+                      <div className="flex flex-wrap gap-2 justify-center mt-4">
+                        {product.sizes.map((sz) => (
+                          <span key={sz} className="px-3 py-1.5 rounded-lg border border-base-300 bg-base-900 text-xs font-bold text-brand">
+                            {sz}
+                          </span>
                         ))}
-                      </tbody>
-                    </table>
+                      </div>
+                    )}
                   </div>
                 )}
 
