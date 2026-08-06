@@ -540,8 +540,8 @@ export const CallTeamPanel = () => {
               onChange={(e) => setProductFilter(e.target.value)}
             >
               <option value="">ALL PRODUCTS</option>
-              {productOptions.map((product) => (
-                <option key={product} value={product}>{product.toUpperCase()}</option>
+              {productOptions.map((product, idx) => (
+                <option key={`${product}-${idx}`} value={product}>{product.toUpperCase()}</option>
               ))}
             </select>
           </div>

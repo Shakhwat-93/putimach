@@ -74,7 +74,7 @@ export const buildProductCatalog = (inventory = []) => {
     .sort((a, b) => a.name.localeCompare(b.name));
 };
 
-export const getProductOptions = (inventory = []) => buildProductCatalog(inventory).map((item) => item.name);
+export const getProductOptions = (inventory = []) => Array.from(new Set(buildProductCatalog(inventory).map((item) => item.name)));
 
 export const getProductPriceMap = (inventory = []) => buildProductCatalog(inventory).reduce((acc, item) => {
   acc[item.name] = item.unit_price;
