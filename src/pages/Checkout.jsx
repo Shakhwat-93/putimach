@@ -25,30 +25,33 @@ function generateOrderNumber() {
   return `RR-${now}-${rand}`;
 }
 
-// Get Client IP Address with timeout & fallback API
+// Get Client IP Address with fast timeout & fallback API using AbortController
 async function getClientIp() {
-  try {
-    const res = await Promise.race([
-      fetch('https://api.ipify.org?format=json').then(r => r.json()),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2500))
-    ]);
-    if (res?.ip) return res.ip;
-  } catch (e) {
-    console.warn('[IP Capture] Primary API failed:', e);
-  }
+  const fetchWithTimeout = async (url, ms = 1200) => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), ms);
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data?.ip || null;
+    } catch {
+      return null;
+    }
+  };
 
-  try {
-    const res2 = await Promise.race([
-      fetch('https://ipapi.co/json/').then(r => r.json()),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2500))
-    ]);
-    if (res2?.ip) return res2.ip;
-  } catch (e) {
-    console.warn('[IP Capture] Fallback API failed:', e);
-  }
-
-  return null;
+  const ip = await fetchWithTimeout('https://api.ipify.org?format=json', 1000);
+  if (ip) return ip;
+  return await fetchWithTimeout('https://ipapi.co/json/', 1000);
 }
+
+// Normalize variant values for reliable case-insensitive matching
+const normalizeVal = (val) => {
+  if (!val) return '';
+  const s = String(val).trim().toLowerCase();
+  return (s === 'none' || s === 'one size' || s === 'standard') ? '' : s;
+};
 
 // Get traffic source/UTM medium from URL or referrer
 function getTrafficSource() {
@@ -155,11 +158,14 @@ function Field({ label, icon: Icon, required, children, hint }) {
 function SuccessScreen({ orderNumber, items, total, onContinue }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-start pt-16 pb-20 px-4 relative overflow-hidden">
-      {/* Ambient glows */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-brand/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 left-1/4 w-[350px] h-[350px] bg-emerald-900/6 rounded-full blur-[100px]" />
-      </div>
+      {/* Ambient glows — lightweight radial gradient behind page to prevent WebKit blur filter lag */}
+      <div 
+        className="fixed inset-0 pointer-events-none -z-10 overflow-hidden"
+        aria-hidden="true"
+        style={{
+          background: 'radial-gradient(circle 500px at 50% 15%, rgba(197, 168, 128, 0.06), transparent 70%), radial-gradient(circle 400px at 25% 85%, rgba(16, 185, 129, 0.05), transparent 70%)'
+        }}
+      />
 
       <div className="relative z-10 w-full max-w-md mx-auto">
 
@@ -325,6 +331,14 @@ export default function Checkout() {
   const [shippingRates, setShippingRates] = useState(DEFAULT_SHIPPING);
   const [shippingArea, setShippingArea] = useState('inside'); // 'inside' | 'sub' | 'outside'
 
+  // Pre-fetch Client IP in background on mount so checkout submission is instant
+  const cachedIpRef = useRef(null);
+  useEffect(() => {
+    getClientIp().then(ip => {
+      if (ip) cachedIpRef.current = ip;
+    });
+  }, []);
+
   useEffect(() => {
     async function loadRates() {
       try {
@@ -375,8 +389,61 @@ export default function Checkout() {
 
     const num = generateOrderNumber();
 
-    // 1. IP Capture & Traffic Source
-    const ipAddress = await getClientIp();
+    // 0. Stock Availability Check (Overselling Prevention across exact Colour + Size variants)
+    try {
+      for (const item of items) {
+        const { data: dbProductRow } = await supabase
+          .from('products')
+          .select('id, data')
+          .eq('id', item.product.id)
+          .maybeSingle();
+
+        if (dbProductRow?.data) {
+          const productData = dbProductRow.data;
+          const variants = Array.isArray(productData.variants) ? productData.variants : [];
+
+          if (variants.length > 0) {
+            const targetSize = normalizeVal(item.size);
+            const targetColor = normalizeVal(item.color);
+
+            const matchedVariant = variants.find(v => {
+              const vSize = normalizeVal(v.size);
+              const vColor = normalizeVal(v.color);
+              const matchSize = (!targetSize && !vSize) || (vSize === targetSize);
+              const matchColor = (!targetColor && !vColor) || (vColor === targetColor);
+              return matchSize && matchColor;
+            });
+
+            if (matchedVariant) {
+              const currentStock = Number(matchedVariant.stock) || 0;
+              if (currentStock < item.quantity) {
+                const varLabel = [
+                  item.size && item.size !== 'One Size' ? `Size: ${item.size}` : '',
+                  item.color && item.color !== 'None' ? `Color: ${item.color}` : ''
+                ].filter(Boolean).join(', ');
+
+                setError(
+                  currentStock <= 0
+                    ? `Sorry, "${item.product.name}"${varLabel ? ` (${varLabel})` : ''} is currently out of stock.`
+                    : `Sorry, only ${currentStock} unit(s) available for "${item.product.name}"${varLabel ? ` (${varLabel})` : ''}. Please adjust your quantity.`
+                );
+                setSubmitting(false);
+                return;
+              }
+            }
+          } else if (productData.in_stock === false) {
+            setError(`Sorry, "${item.product.name}" is currently out of stock.`);
+            setSubmitting(false);
+            return;
+          }
+        }
+      }
+    } catch (stockCheckErr) {
+      console.warn('Pre-order stock verification check error:', stockCheckErr);
+    }
+
+    // 1. IP Capture & Traffic Source (Instant via background prefetch)
+    const ipAddress = cachedIpRef.current || await getClientIp();
     const trafficSource = getTrafficSource();
 
     // 2. Blocked IP Addresses Guard (Fake Order Protection)
@@ -493,11 +560,18 @@ export default function Checkout() {
             let updatedVariants = Array.isArray(productData.variants) ? [...productData.variants] : [];
 
             if (updatedVariants.length > 0) {
+              const targetSize = normalizeVal(item.size);
+              const targetColor = normalizeVal(item.color);
+
               updatedVariants = updatedVariants.map(v => {
-                const sizeMatch = !v.size || String(v.size).trim().toLowerCase() === String(item.size || '').trim().toLowerCase();
-                const colorMatch = !v.color || String(v.color).trim().toLowerCase() === String(item.color || '').trim().toLowerCase();
+                const vSize = normalizeVal(v.size);
+                const vColor = normalizeVal(v.color);
+                const sizeMatch = (!targetSize && !vSize) || (vSize === targetSize);
+                const colorMatch = (!targetColor && !vColor) || (vColor === targetColor);
+
                 if (sizeMatch && colorMatch) {
-                  const newQty = Math.max(0, (Number(v.stock) || 0) - item.quantity);
+                  const currentStock = Math.max(0, Number(v.stock) || 0);
+                  const newQty = Math.max(0, currentStock - item.quantity);
                   return { ...v, stock: newQty };
                 }
                 return v;
@@ -598,41 +672,36 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen relative">
-      {/* Subtle background glows */}
-      <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-brand/5 rounded-full blur-[160px] pointer-events-none" />
-      <div className="fixed bottom-0 left-0 w-[400px] h-[400px] bg-orange-900/10 rounded-full blur-[140px] pointer-events-none" />
+      {/* Subtle background glows — using pure CSS radial gradient in -z-10 to prevent WebKit blur filter lag and pointer obstruction */}
+      <div 
+        className="fixed inset-0 pointer-events-none -z-10 overflow-hidden" 
+        aria-hidden="true"
+        style={{
+          background: 'radial-gradient(circle 500px at 95% 10%, rgba(197, 168, 128, 0.05), transparent 70%), radial-gradient(circle 450px at 5% 90%, rgba(139, 69, 19, 0.04), transparent 70%)'
+        }}
+      />
 
       <div className="container-site py-8 lg:py-12 relative z-10">
         {/* Back button */}
-        <motion.button
+        <button
+          type="button"
           onClick={() => navigate(-1)}
-          initial={{ opacity: 0, x: -12 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-2 text-surface-muted hover:text-surface-primary text-sm font-medium transition-colors mb-8 group"
+          className="flex items-center gap-2 text-surface-muted hover:text-surface-primary text-sm font-medium transition-colors mb-8 group cursor-pointer"
+          style={{ touchAction: 'manipulation' }}
         >
           <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
           Back
-        </motion.button>
+        </button>
 
         {/* Page heading */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="mb-8"
-        >
+        <div className="mb-8">
           <p className="section-label mb-1">Secure Checkout</p>
           <h1 className="font-black text-3xl sm:text-4xl text-surface-primary">Complete Your Order</h1>
-        </motion.div>
+        </div>
 
-        <form onSubmit={handleSubmit} className="grid lg:grid-cols-5 gap-8 xl:gap-12">
+        <form onSubmit={handleSubmit} className="grid lg:grid-cols-5 gap-8 xl:gap-12 relative z-10 pointer-events-auto">
           {/* ── Left: Form ───────────────────────────────────────────────── */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="lg:col-span-3 space-y-5"
-          >
+          <div className="lg:col-span-3 space-y-5">
             {/* Delivery Info Card */}
             <div className="card p-5 sm:p-6 space-y-5">
               <div className="flex items-center gap-2.5 mb-1">
@@ -652,11 +721,13 @@ export default function Checkout() {
                 <input
                   required
                   type="text"
+                  autoComplete="name"
                   placeholder="e.g. Arif Hossain"
                   value={form.name}
                   onChange={setField('name')}
-                  className="input"
+                  className="input text-base sm:text-small"
                   id="checkout-name"
+                  style={{ touchAction: 'manipulation' }}
                 />
               </Field>
 
@@ -664,22 +735,26 @@ export default function Checkout() {
                 <input
                   required
                   type="tel"
+                  autoComplete="tel"
                   placeholder="e.g. 01712345678"
                   value={form.phone}
                   onChange={setField('phone')}
-                  className="input font-mono"
+                  className="input font-mono text-base sm:text-small"
                   id="checkout-phone"
+                  style={{ touchAction: 'manipulation' }}
                 />
               </Field>
 
               <Field label="Email Address" icon={Mail} hint="Optional — For order updates and confirmations">
                 <input
                   type="email"
+                  autoComplete="email"
                   placeholder="e.g. arif@email.com"
                   value={form.email}
                   onChange={setField('email')}
-                  className="input"
+                  className="input text-base sm:text-small"
                   id="checkout-email"
+                  style={{ touchAction: 'manipulation' }}
                 />
               </Field>
 
@@ -692,14 +767,16 @@ export default function Checkout() {
                   ].map((area) => {
                     const isSelected = shippingArea === area.id;
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={area.id}
                         onClick={() => setShippingArea(area.id)}
-                        className={`cursor-pointer p-4 rounded-xl border-2 transition-all duration-200 flex flex-col justify-between ${
+                        className={`text-left p-4 rounded-xl border-2 transition-all duration-200 flex flex-col justify-between cursor-pointer active:scale-[0.98] ${
                           isSelected
                             ? 'border-brand bg-brand/5 shadow-glow-sm'
                             : 'border-base-300 bg-base-950/40 hover:border-base-400'
                         }`}
+                        style={{ touchAction: 'manipulation' }}
                       >
                         <div>
                           <p className="font-bold text-xs text-surface-primary">{area.label}</p>
@@ -708,7 +785,7 @@ export default function Checkout() {
                           )}
                         </div>
                         <p className="font-black text-sm text-brand mt-3">৳{area.fee}</p>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -718,29 +795,27 @@ export default function Checkout() {
                 <input
                   required
                   type="text"
+                  autoComplete="address-level2"
                   placeholder="e.g. Dhaka, Chittagong, Sylhet, Savar..."
                   value={form.city}
                   onChange={setField('city')}
-                  list="city-suggestions"
-                  className="input"
+                  className="input text-base sm:text-small"
                   id="checkout-city"
+                  style={{ touchAction: 'manipulation' }}
                 />
-                <datalist id="city-suggestions">
-                  {['Dhaka', 'Chittagong', 'Sylhet', 'Rajshahi', 'Khulna', 'Barisal', 'Comilla', 'Gazipur', 'Narayanganj', 'Savar'].map(c => (
-                    <option key={c} value={c} />
-                  ))}
-                </datalist>
               </Field>
 
               <Field label="Full Address" icon={MapPin} required hint="House/flat no., road, area">
                 <textarea
                   required
                   rows={2}
+                  autoComplete="street-address"
                   placeholder="House 12, Road 5, Mirpur-10..."
                   value={form.address}
                   onChange={setField('address')}
-                  className="input resize-none"
+                  className="input resize-none text-base sm:text-small"
                   id="checkout-address"
+                  style={{ touchAction: 'manipulation' }}
                 />
               </Field>
 
@@ -750,8 +825,9 @@ export default function Checkout() {
                   placeholder="Any special instructions? (optional)"
                   value={form.note}
                   onChange={setField('note')}
-                  className="input resize-none"
+                  className="input resize-none text-base sm:text-small"
                   id="checkout-note"
+                  style={{ touchAction: 'manipulation' }}
                 />
               </Field>
             </div>
@@ -778,25 +854,19 @@ export default function Checkout() {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* ── Right: Order Summary (Desktop & Mobile) ───────────────────────────── */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="lg:col-span-2"
-          >
+          <div className="lg:col-span-2">
             <div className="card p-5 sm:p-6 sticky top-24 space-y-5">
               <OrderSummary items={items} subtotal={subtotal} shipping={shipping} total={total} />
 
               {/* Submit Place Order Button */}
-              <motion.button
+              <button
                 type="submit"
                 disabled={submitting || items.length === 0}
-                whileHover={!submitting ? { scale: 1.015, y: -2 } : {}}
-                whileTap={!submitting ? { scale: 0.98 } : {}}
-                className="w-full py-4 rounded-xl bg-brand hover:bg-brand-400 text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all duration-300 shadow-glow hover:shadow-glow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-4 rounded-xl bg-brand hover:bg-brand-400 active:scale-[0.98] text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all duration-200 shadow-glow hover:shadow-glow-lg disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                style={{ touchAction: 'manipulation' }}
               >
                 {submitting ? (
                   <>
@@ -810,14 +880,14 @@ export default function Checkout() {
                     <ChevronRight size={16} />
                   </>
                 )}
-              </motion.button>
+              </button>
 
               <p className="text-center text-[10px] text-surface-muted">
                 By placing your order you agree to our Terms & Privacy Policy.
                 Your data is secure and encrypted.
               </p>
             </div>
-          </motion.div>
+          </div>
         </form>
       </div>
     </div>

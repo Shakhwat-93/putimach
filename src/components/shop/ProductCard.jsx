@@ -27,17 +27,27 @@ export default function ProductCard({ product, index = 0 }) {
   const reviewsCount = product.reviews_count || product.reviews || 0;
   const rating = product.rating || 5.0;
 
-  const inStock = product.inventory_id
-    ? (product.inventory?.current_stock > 0)
-    : (product.in_stock !== false);
+  const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
+  const totalVariantStock = hasVariants
+    ? product.variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
+    : null;
+
+  const inStock = hasVariants
+    ? (totalVariantStock > 0)
+    : (product.inventory_id
+        ? (product.inventory?.current_stock > 0)
+        : (product.in_stock !== false));
+
+  const availableVariant = hasVariants ? product.variants.find(v => (Number(v.stock) || 0) > 0) : null;
+  const defaultSize = availableVariant?.size || product.sizes?.[1] || product.sizes?.[0] || 'M';
+  const defaultColor = availableVariant?.color || product.colors?.[0] || 'None';
 
   const handleQuickAdd = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (!inStock) return;
-    const defaultSize = product.sizes?.[1] || product.sizes?.[0] || 'M';
     setAdding(true);
-    addItem(product, defaultSize, 1);
+    addItem(product, defaultSize, defaultColor, 1);
     setTimeout(() => {
       setAdding(false);
       openCart();
@@ -48,8 +58,7 @@ export default function ProductCard({ product, index = 0 }) {
     e.preventDefault();
     e.stopPropagation();
     if (!inStock) return;
-    const defaultSize = product.sizes?.[1] || product.sizes?.[0] || 'M';
-    addItem(product, defaultSize, 1);
+    addItem(product, defaultSize, defaultColor, 1);
     navigate('/checkout');
   };
 

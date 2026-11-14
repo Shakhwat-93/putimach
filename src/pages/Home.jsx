@@ -356,7 +356,8 @@ export default function Home() {
   const [products, setProducts] = useState(cached?.products || []);
   const [categories, setCategories] = useState(cached?.categories || []);
   const [topSellingProduct, setTopSellingProduct] = useState(cached?.topSellingProduct || null);
-  const [settings, setSettings] = useState(cached?.settings ? { ...defaultHome, ...cached.settings } : defaultHome);
+  const cleanCachedSettings = cached?.settings ? Object.fromEntries(Object.entries(cached.settings).filter(([_, v]) => v !== '' && v !== null && v !== undefined)) : null;
+  const [settings, setSettings] = useState(cleanCachedSettings ? { ...defaultHome, ...cleanCachedSettings } : defaultHome);
 
   useEffect(() => {
     const fetchWithTimeout = (url, ms = 1500) => {
@@ -395,7 +396,8 @@ export default function Home() {
           getCategories().catch(err => { console.error('Failed to load categories:', err); return []; })
         ]);
 
-        const freshSettings = siteData ? { ...defaultHome, ...siteData } : defaultHome;
+        const cleanSiteData = siteData ? Object.fromEntries(Object.entries(siteData).filter(([_, v]) => v !== '' && v !== null && v !== undefined)) : null;
+        const freshSettings = cleanSiteData ? { ...defaultHome, ...cleanSiteData } : defaultHome;
 
         if (prodData?.length) setProducts(prodData);
         if (catData?.length) setCategories(catData);
@@ -407,7 +409,7 @@ export default function Home() {
 
         // Update cache with latest data
         writeCache({
-          settings: siteData || null,
+          settings: cleanSiteData || null,
           products: prodData || [],
           categories: catData || [],
           topSellingProduct: topProduct || null,

@@ -180,6 +180,9 @@
            text-surface-primary placeholder-surface-muted text-small
            outline-none transition-all duration-200
            focus:border-brand/40 focus:ring-1 focus:ring-brand/20;
+    -webkit-appearance: none;
+    appearance: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* Table */

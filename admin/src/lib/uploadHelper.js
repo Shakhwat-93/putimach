@@ -70,14 +70,36 @@ export function fileToDataUrl(file) {
 
 /**
  * Universal upload image function:
- * Converts file to optimized WebP Data URL (instant, portable across Localhost, Vercel & Mobile!)
+ * First attempts server upload via /admin-api/upload to generate static file URL.
+ * Fallback to WebP Data URL if offline/server error.
  */
 export async function uploadImage(file) {
   if (!file) throw new Error('No file provided');
 
-  // Convert to WebP first (<80KB)
+  // 1. Convert to optimized WebP
   const webpFile = await convertToWebP(file);
 
-  // Convert WebP file to Data URL directly (works 100% on Localhost, Vercel & Mobile)
+  // 2. Try server-side file upload endpoint
+  try {
+    const formData = new FormData();
+    formData.append('file', webpFile);
+
+    const response = await fetch('/admin-api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data && data.success && data.url) {
+        return data.url;
+      }
+    }
+  } catch (err) {
+    console.warn('Server image upload failed, falling back to WebP Data URL:', err);
+  }
+
+  // 3. Fallback: Convert WebP file to Data URL
   return await fileToDataUrl(webpFile);
 }
+
